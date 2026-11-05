@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useCart } from '@/context/CartContext';
-import { Sparkles, MessageSquare, Coffee, X } from 'lucide-react';
+import { Sparkles, X } from 'lucide-react';
 
 export function SommelierWidget() {
   const { isSommelierOpen, openSommelierWithCoffee } = useCart();

@@ -1,11 +1,21 @@
 'use client';
 
-import React from 'react';
-import { Coffee, ShieldCheck, HeartHandshake, Leaf, ArrowRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { Coffee, ShieldCheck, HeartHandshake, Leaf, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 export function Footer() {
+  const [email, setEmail] = useState('');
+  const [subscribed, setSubscribed] = useState(false);
+
+  const handleSubscribe = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setSubscribed(true);
+    setEmail('');
+  };
+
   return (
     <footer className="w-full bg-[#0a0807] border-t border-amber-600/20 pt-16 pb-12 text-zinc-400">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -70,7 +80,9 @@ export function Footer() {
 
           {/* Nav Quick Links */}
           <div className="md:col-span-3 space-y-3">
-            <h5 className="text-xs font-semibold uppercase tracking-wider text-amber-200">Navegación</h5>
+            <h5 className="text-xs font-semibold uppercase tracking-wider text-amber-200">
+              Navegación
+            </h5>
             <ul className="space-y-2 text-sm">
               <li>
                 <a href="#catalogo" className="hover:text-amber-400 transition-colors">
@@ -103,15 +115,37 @@ export function Footer() {
             <p className="text-sm text-zinc-400">
               Suscríbete para recibir invitaciones a catas privadas, alertas de nuevos microlotes y un 15% de descuento en tu primer pedido.
             </p>
-            <div className="flex gap-2">
-              <Input
-                placeholder="tu@email.com"
-                className="bg-zinc-900 border-zinc-700 text-zinc-100 text-sm focus:border-amber-500 rounded-lg"
-              />
-              <Button className="bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold px-4 rounded-lg">
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </div>
+            {subscribed ? (
+              <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-300 flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-400" />
+                <div>
+                  <span className="font-semibold block text-emerald-200">
+                    ¡Bienvenido al Club de Catadores!
+                  </span>
+                  <span>
+                    Usa el código <strong className="font-mono text-amber-300">AURA15</strong> en tu cesta para un 15% de descuento.
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleSubscribe} className="flex gap-2">
+                <Input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="tu@email.com"
+                  className="bg-zinc-900 border-zinc-700 text-zinc-100 text-sm focus:border-amber-500 rounded-lg"
+                />
+                <Button
+                  type="submit"
+                  aria-label="Suscribirse al Club de Catadores"
+                  className="bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold px-4 rounded-lg cursor-pointer"
+                >
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </form>
+            )}
           </div>
         </div>
 
@@ -120,7 +154,9 @@ export function Footer() {
           <p>© 2026 AURA Specialty Coffee Roasters. Todos los derechos reservados.</p>
           <div className="flex gap-6">
             <span className="hover:text-zinc-400 cursor-pointer">Términos de Servicio</span>
-            <span className="hover:text-zinc-400 cursor-pointer">Política de Envío de Café Fresco</span>
+            <span className="hover:text-zinc-400 cursor-pointer">
+              Política de Envío de Café Fresco
+            </span>
             <span className="hover:text-zinc-400 cursor-pointer">Certificaciones SCA</span>
           </div>
         </div>

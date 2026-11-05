@@ -1,23 +1,76 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCart } from '@/context/CartContext';
-import { BREWING_GUIDES } from '@/data/coffeeCatalog';
-import { BrewMethod } from '@/types/coffee';
-import { Droplet, Flame, Timer, Sparkles, Sliders, Calculator, CheckCircle2 } from 'lucide-react';
+import { BREWING_GUIDES, COFFEE_PRODUCTS } from '@/data/coffeeCatalog';
+import { BrewMethod, CartItem } from '@/types/coffee';
+import {
+  Droplet,
+  Flame,
+  Timer,
+  Sparkles,
+  Sliders,
+  Calculator,
+  CheckCircle2,
+  Play,
+  Pause,
+  RotateCcw,
+  ShoppingBag,
+  Award,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+function getGrindForGuide(method: BrewMethod): CartItem['grindOption'] {
+  switch (method) {
+    case 'Espresso':
+    case 'Moka':
+      return 'Molienda Fina (Espresso)';
+    case 'Prensa Francesa':
+      return 'Molienda Gruesa (Prensa Francesa)';
+    default:
+      return 'Molienda Media (V60 / Filtro)';
+  }
+}
+
 export function BrewGuideSection() {
-  const { openSommelierWithCoffee } = useCart();
+  const { openSommelierWithCoffee, addItem } = useCart();
   const [selectedMethod, setSelectedMethod] = useState<BrewMethod>('V60');
   const [coffeeGrams, setCoffeeGrams] = useState<number>(18);
+
+  // Cronómetro de extracción en vivo
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [isRunning, setIsRunning] = useState(false);
+
+  useEffect(() => {
+    if (!isRunning) return;
+    const interval = setInterval(() => {
+      setTimerSeconds((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isRunning]);
+
+  const formatTime = (secs: number) => {
+    const mins = Math.floor(secs / 60);
+    const rem = secs % 60;
+    return `${String(mins).padStart(2, '0')}:${String(rem).padStart(2, '0')}`;
+  };
 
   const guide = BREWING_GUIDES.find((g) => g.id === selectedMethod) || BREWING_GUIDES[0];
 
   // Cálculo de ratio dinámico
   const ratioMultiplier =
-    selectedMethod === 'Espresso' ? 2 : selectedMethod === 'Aeropress' ? 14 : selectedMethod === 'Chemex' ? 15 : 16;
+    selectedMethod === 'Espresso'
+      ? 2
+      : selectedMethod === 'Aeropress'
+      ? 14
+      : selectedMethod === 'Chemex' || selectedMethod === 'Prensa Francesa'
+      ? 15
+      : 16;
   const calculatedWater = Math.round(coffeeGrams * ratioMultiplier);
+
+  const recommendedProducts = guide.recommendedCoffees
+    .map((id) => COFFEE_PRODUCTS.find((p) => p.id === id))
+    .filter((p): p is NonNullable<typeof p> => Boolean(p));
 
   return (
     <section id="guia-extraccion" className="py-20 bg-[#100c0a] border-t border-amber-600/20">
@@ -40,7 +93,11 @@ export function BrewGuideSection() {
           {BREWING_GUIDES.map((g) => (
             <button
               key={g.id}
-              onClick={() => setSelectedMethod(g.id)}
+              onClick={() => {
+                setSelectedMethod(g.id);
+                setIsRunning(false);
+                setTimerSeconds(0);
+              }}
               className={`px-5 py-2.5 rounded-xl font-medium text-xs sm:text-sm transition-all cursor-pointer border ${
                 selectedMethod === g.id
                   ? 'bg-amber-500 text-zinc-950 font-bold border-amber-400 shadow-lg shadow-amber-500/20'
@@ -54,7 +111,7 @@ export function BrewGuideSection() {
 
         {/* Method Details Card & Ratio Calculator */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-          {/* Left: Guide Parameters */}
+          {/* Left: Guide Parameters + Recommended Coffees */}
           <div className="lg:col-span-7 p-6 sm:p-8 rounded-2xl bg-zinc-950/80 border border-amber-500/30 flex flex-col justify-between space-y-6">
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -66,34 +123,42 @@ export function BrewGuideSection() {
               <h3 className="font-serif text-2xl sm:text-3xl font-bold text-amber-100">
                 {guide.name}
               </h3>
-              <p className="text-sm text-zinc-300 mt-1 italic">
-                &quot;{guide.tagline}&quot;
-              </p>
+              <p className="text-sm text-zinc-300 mt-1 italic">&quot;{guide.tagline}&quot;</p>
             </div>
 
             {/* 4 Tech metrics */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="p-3.5 rounded-xl bg-zinc-900/90 border border-zinc-800">
                 <Droplet className="w-5 h-5 text-amber-400 mb-1" />
-                <span className="text-[10px] text-zinc-400 uppercase font-medium block">Ratio Base</span>
+                <span className="text-[10px] text-zinc-400 uppercase font-medium block">
+                  Ratio Base
+                </span>
                 <span className="text-xs sm:text-sm font-bold text-zinc-100">{guide.ratio}</span>
               </div>
 
               <div className="p-3.5 rounded-xl bg-zinc-900/90 border border-zinc-800">
                 <Flame className="w-5 h-5 text-amber-400 mb-1" />
-                <span className="text-[10px] text-zinc-400 uppercase font-medium block">Temp. Agua</span>
-                <span className="text-xs sm:text-sm font-bold text-zinc-100">{guide.waterTemp}</span>
+                <span className="text-[10px] text-zinc-400 uppercase font-medium block">
+                  Temp. Agua
+                </span>
+                <span className="text-xs sm:text-sm font-bold text-zinc-100">
+                  {guide.waterTemp}
+                </span>
               </div>
 
               <div className="p-3.5 rounded-xl bg-zinc-900/90 border border-zinc-800">
                 <Timer className="w-5 h-5 text-amber-400 mb-1" />
-                <span className="text-[10px] text-zinc-400 uppercase font-medium block">Tiempo Total</span>
+                <span className="text-[10px] text-zinc-400 uppercase font-medium block">
+                  Tiempo Total
+                </span>
                 <span className="text-xs sm:text-sm font-bold text-zinc-100">{guide.brewTime}</span>
               </div>
 
               <div className="p-3.5 rounded-xl bg-zinc-900/90 border border-zinc-800">
                 <Sliders className="w-5 h-5 text-amber-400 mb-1" />
-                <span className="text-[10px] text-zinc-400 uppercase font-medium block">Molienda</span>
+                <span className="text-[10px] text-zinc-400 uppercase font-medium block">
+                  Molienda
+                </span>
                 <span className="text-xs sm:text-sm font-bold text-zinc-100">{guide.grind}</span>
               </div>
             </div>
@@ -103,23 +168,53 @@ export function BrewGuideSection() {
               <h5 className="text-xs font-bold text-amber-300 flex items-center gap-1.5 mb-1">
                 <CheckCircle2 className="w-4 h-4 text-amber-400" /> Secreto de Barra:
               </h5>
-              <p className="text-xs text-zinc-300 leading-relaxed">
-                {guide.tips}
-              </p>
+              <p className="text-xs text-zinc-300 leading-relaxed">{guide.tips}</p>
             </div>
+
+            {/* Recommended Coffees for this Method */}
+            {recommendedProducts.length > 0 && (
+              <div className="space-y-2.5 pt-2 border-t border-zinc-800/80">
+                <span className="text-xs font-semibold text-amber-300 flex items-center gap-1.5">
+                  <Award className="w-4 h-4 text-amber-400" /> Microlotes calibrados para {guide.id}:
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {recommendedProducts.map((coffee) => (
+                    <div
+                      key={coffee.id}
+                      className="p-3 rounded-xl bg-zinc-900/80 border border-zinc-800 hover:border-amber-500/40 flex items-center justify-between gap-2 transition-colors"
+                    >
+                      <div className="min-w-0">
+                        <h6 className="text-xs font-bold text-zinc-100 truncate">{coffee.name}</h6>
+                        <p className="text-[10px] text-zinc-400 truncate">
+                          {coffee.tastingNotes.slice(0, 2).join(' • ')} • ${coffee.price.toFixed(2)}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => addItem(coffee, getGrindForGuide(guide.id))}
+                        title={`Añadir con ${getGrindForGuide(guide.id)}`}
+                        className="shrink-0 px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-[11px] flex items-center gap-1 cursor-pointer transition-colors"
+                      >
+                        <ShoppingBag className="w-3 h-3" />
+                        <span>Añadir</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Right: Interactive Ratio Calculator */}
+          {/* Right: Interactive Ratio Calculator + Live Brew Timer */}
           <div className="lg:col-span-5 p-6 sm:p-8 rounded-2xl bg-gradient-to-b from-zinc-950 to-[#140f0c] border border-amber-500/40 flex flex-col justify-between space-y-6">
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <Calculator className="w-5 h-5 text-amber-400" />
                 <h4 className="font-serif text-lg font-bold text-amber-100">
-                  Calculadora de Ratio en Vivo
+                  Calculadora de Ratio & Cronómetro
                 </h4>
               </div>
               <p className="text-xs text-zinc-400 leading-relaxed">
-                Ajusta la cantidad de café que tienes en casa para obtener la cantidad exacta de agua para tu {guide.name}.
+                Ajusta la dosis de café seco para obtener el agua exacta y cronometra tu extracción en tiempo real.
               </p>
             </div>
 
@@ -137,25 +232,73 @@ export function BrewGuideSection() {
                 step="1"
                 value={coffeeGrams}
                 onChange={(e) => setCoffeeGrams(Number(e.target.value))}
+                aria-label="Gramos de café seco"
                 className="w-full accent-amber-500 cursor-pointer"
               />
               <div className="flex justify-between text-[10px] text-zinc-500">
                 <span>10g (1 taza ligera)</span>
                 <span>20g (2 tazas)</span>
-                <span>40g (Jarrita Chemex)</span>
+                <span>40g (Jarra Chemex)</span>
               </div>
 
               {/* Calculated Results Box */}
               <div className="p-4 rounded-xl bg-zinc-900 border border-amber-500/30 text-center space-y-1">
                 <span className="text-[11px] text-zinc-400 block uppercase font-medium">
-                  Agua Caliente Requerida ({guide.waterTemp}):
+                  {selectedMethod === 'Espresso'
+                    ? 'Rendimiento Líquido en Taza (Ratio 1:2):'
+                    : `Agua Caliente Requerida (${guide.waterTemp}):`}
                 </span>
                 <span className="font-serif text-3xl font-extrabold text-amber-300">
                   {calculatedWater} ml / gramos
                 </span>
-                <span className="text-[10px] text-emerald-400 block">
-                  ✓ Pre-infusión sugerida con los primeros {Math.round(coffeeGrams * 2.5)} ml
-                </span>
+                {selectedMethod !== 'Espresso' && (
+                  <span className="text-[10px] text-emerald-400 block">
+                    ✓ Pre-infusión (Bloom) sugerida: primeros {Math.round(coffeeGrams * 2.5)} ml por 40s
+                  </span>
+                )}
+              </div>
+
+              {/* Interactive Brew Timer */}
+              <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center justify-between gap-3">
+                <div>
+                  <span className="text-[10px] uppercase tracking-wider text-zinc-500 block">
+                    Cronómetro Barista ({guide.brewTime})
+                  </span>
+                  <span className="font-mono text-2xl font-bold text-amber-100">
+                    {formatTime(timerSeconds)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setIsRunning((r) => !r)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors ${
+                      isRunning
+                        ? 'bg-amber-600/30 text-amber-300 border border-amber-500/40'
+                        : 'bg-amber-500 text-zinc-950 hover:bg-amber-400'
+                    }`}
+                  >
+                    {isRunning ? (
+                      <>
+                        <Pause className="w-3.5 h-3.5" /> Pausar
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-3.5 h-3.5" /> Iniciar
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsRunning(false);
+                      setTimerSeconds(0);
+                    }}
+                    title="Reiniciar cronómetro"
+                    aria-label="Reiniciar cronómetro"
+                    className="p-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
 

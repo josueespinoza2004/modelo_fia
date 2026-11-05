@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useCart } from '@/context/CartContext';
 import { COFFEE_PRODUCTS } from '@/data/coffeeCatalog';
 import { FlavorCategory } from '@/types/coffee';
-import { Sparkles, Compass, Check, ArrowRight } from 'lucide-react';
+import { Sparkles, Compass, ArrowRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface CategoryTab {
@@ -53,22 +53,32 @@ const CATEGORIES: CategoryTab[] = [
   },
 ];
 
-export function FlavorRadarSection({ onSelectFilter }: { onSelectFilter?: (cat: FlavorCategory | 'todos') => void }) {
+interface FlavorRadarSectionProps {
+  selectedFilter?: FlavorCategory | 'todos';
+  onSelectFilter?: (cat: FlavorCategory | 'todos') => void;
+}
+
+export function FlavorRadarSection({
+  selectedFilter,
+  onSelectFilter,
+}: FlavorRadarSectionProps) {
   const { openSommelierWithCoffee } = useCart();
-  const [activeCategory, setActiveCategory] = useState<FlavorCategory | 'todos'>('todos');
+  const [internalCategory, setInternalCategory] = useState<FlavorCategory | 'todos'>('todos');
+
+  const activeCategory = selectedFilter !== undefined ? selectedFilter : internalCategory;
 
   const handleSelect = (id: FlavorCategory | 'todos') => {
-    setActiveCategory(id);
+    setInternalCategory(id);
     if (onSelectFilter) {
       onSelectFilter(id);
     }
   };
 
   const activeInfo = CATEGORIES.find((c) => c.id === activeCategory) || CATEGORIES[0];
-  const matchingCount =
+  const matchingCoffees =
     activeCategory === 'todos'
-      ? COFFEE_PRODUCTS.length
-      : COFFEE_PRODUCTS.filter((c) => c.flavorCategory === activeCategory).length;
+      ? COFFEE_PRODUCTS
+      : COFFEE_PRODUCTS.filter((c) => c.flavorCategory === activeCategory);
 
   return (
     <section id="perfil-sensorial" className="py-16 bg-[#0f0c0a] border-y border-amber-600/20">
@@ -106,19 +116,18 @@ export function FlavorRadarSection({ onSelectFilter }: { onSelectFilter?: (cat: 
 
         {/* Selected Category Highlight Banner */}
         <div className="p-6 sm:p-8 rounded-2xl bg-zinc-950/80 border border-amber-500/30 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="space-y-2 text-center md:text-left">
-            <div className="flex items-center justify-center md:justify-start gap-2">
+          <div className="space-y-2.5 text-center md:text-left">
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
               <span className="text-2xl">{activeInfo.emoji}</span>
               <h3 className="font-serif text-xl sm:text-2xl font-bold text-amber-200">
                 {activeInfo.title}
               </h3>
               <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/30 text-xs">
-                {matchingCount} {matchingCount === 1 ? 'microlote disponible' : 'microlotes disponibles'}
+                {matchingCoffees.length}{' '}
+                {matchingCoffees.length === 1 ? 'microlote disponible' : 'microlotes disponibles'}
               </Badge>
             </div>
-            <p className="text-sm text-zinc-300 max-w-xl">
-              {activeInfo.description}
-            </p>
+            <p className="text-sm text-zinc-300 max-w-xl">{activeInfo.description}</p>
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-1.5 pt-1">
               <span className="text-xs text-zinc-500 mr-1">Notas dominantes:</span>
               {activeInfo.notes.map((note) => (
@@ -130,6 +139,18 @@ export function FlavorRadarSection({ onSelectFilter }: { onSelectFilter?: (cat: 
                 </span>
               ))}
             </div>
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 pt-1">
+              <span className="text-xs text-zinc-500">Granos en esta familia:</span>
+              {matchingCoffees.map((c) => (
+                <a
+                  key={c.id}
+                  href="#catalogo"
+                  className="text-xs text-amber-400 hover:underline font-medium"
+                >
+                  • {c.name}
+                </a>
+              ))}
+            </div>
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
@@ -137,7 +158,7 @@ export function FlavorRadarSection({ onSelectFilter }: { onSelectFilter?: (cat: 
               href="#catalogo"
               className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs sm:text-sm flex items-center gap-2 transition-colors cursor-pointer"
             >
-              <span>Ver Granos Filtrados</span>
+              <span>Ver Granos Filtrados ({matchingCoffees.length})</span>
               <ArrowRight className="w-4 h-4" />
             </a>
 

@@ -1,7 +1,5 @@
-'use client';
-
 import React from 'react';
-import { HeartHandshake, ShieldCheck, Sparkles, MapPin, Coffee } from 'lucide-react';
+import { HeartHandshake, ShieldCheck, MapPin, Coffee } from 'lucide-react';
 
 export function OriginPhilosophy() {
   return (
@@ -80,7 +78,7 @@ export function OriginPhilosophy() {
 
               <div className="grid grid-cols-2 gap-4 pt-2">
                 <div className="p-4 rounded-xl bg-zinc-900/80 border border-zinc-800 text-center">
-                  <span className="font-serif text-3xl font-bold text-amber-300 block">4</span>
+                  <span className="font-serif text-3xl font-bold text-amber-300 block">5</span>
                   <span className="text-xs text-zinc-400 mt-1 block">Países de Origen Exclusivo</span>
                 </div>
 

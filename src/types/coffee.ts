@@ -54,3 +54,13 @@ export interface QuizAnswer {
   flavorPreference?: 'frutal' | 'chocolate' | 'floral' | 'intenso';
   milkPreference?: 'solo' | 'con-leche' | 'ambos';
 }
+
+export interface UserPalateMemory {
+  preferredMethod?: BrewMethod;
+  flavorPreference?: 'floral' | 'frutal' | 'chocolate' | 'decaf';
+  milkPreference?: 'solo' | 'con-leche';
+  lowAcidity?: boolean;
+  consultedCoffees?: string[];
+  lastUpdated?: string;
+}
+

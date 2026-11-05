@@ -17,10 +17,16 @@ export default function HomePage() {
       <HeroSection />
 
       {/* 2. Flavor Radar & Sensory Navigator */}
-      <FlavorRadarSection onSelectFilter={(cat) => setActiveFlavorFilter(cat)} />
+      <FlavorRadarSection
+        selectedFilter={activeFlavorFilter}
+        onSelectFilter={(cat) => setActiveFlavorFilter(cat)}
+      />
 
       {/* 3. Product Catalog Grid with filter sync */}
-      <ProductCatalog initialFilter={activeFlavorFilter} />
+      <ProductCatalog
+        initialFilter={activeFlavorFilter}
+        onFilterChange={(cat) => setActiveFlavorFilter(cat)}
+      />
 
       {/* 4. Precision Brewing Guide & Ratio Calculator */}
       <BrewGuideSection />

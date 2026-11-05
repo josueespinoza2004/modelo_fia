@@ -3,19 +3,63 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { useCart } from '@/context/CartContext';
-import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight, CheckCircle2, Sparkles } from 'lucide-react';
+import { CartItem } from '@/types/coffee';
+import {
+  X,
+  Trash2,
+  Plus,
+  Minus,
+  ShoppingBag,
+  ArrowRight,
+  CheckCircle2,
+  Sparkles,
+  Tag,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 
 export function CartDrawer() {
-  const { items, isCartOpen, setIsCartOpen, removeItem, updateQuantity, totalPrice, totalItems, clearCart } = useCart();
+  const {
+    items,
+    isCartOpen,
+    setIsCartOpen,
+    removeItem,
+    updateQuantity,
+    updateGrind,
+    totalPrice,
+    totalItems,
+    clearCart,
+    openSommelierWithCoffee,
+  } = useCart();
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
   const [customerEmail, setCustomerEmail] = useState('');
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
+  const [couponError, setCouponError] = useState('');
 
   const freeShippingThreshold = 55.0;
-  const remainingForFreeShipping = Math.max(0, freeShippingThreshold - totalPrice);
-  const shippingProgress = Math.min(100, (totalPrice / freeShippingThreshold) * 100);
+  const discountRate = appliedCoupon === 'AURA15' ? 0.15 : 0;
+  const discountAmount = totalPrice * discountRate;
+  const subtotalAfterDiscount = totalPrice - discountAmount;
+  const remainingForFreeShipping = Math.max(0, freeShippingThreshold - subtotalAfterDiscount);
+  const shippingProgress = Math.min(100, (subtotalAfterDiscount / freeShippingThreshold) * 100);
+
+  const handleApplyCoupon = () => {
+    const code = couponInput.trim().toUpperCase();
+    if (code === 'AURA15') {
+      setAppliedCoupon('AURA15');
+      setCouponError('');
+      setCouponInput('');
+    } else {
+      setCouponError('Cupón inválido (prueba con AURA15)');
+    }
+  };
 
   const handleCheckout = (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +71,12 @@ export function CartDrawer() {
 
   return (
     <>
-      <div className="fixed inset-0 z-50 overflow-hidden">
+      <div
+        className="fixed inset-0 z-50 overflow-hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cart-drawer-title"
+      >
         {/* Backdrop */}
         <div
           className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity"
@@ -43,7 +92,9 @@ export function CartDrawer() {
                   <ShoppingBag className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-serif text-lg font-bold text-amber-100">Tu Cesta de Café Fresco</h3>
+                  <h3 id="cart-drawer-title" className="font-serif text-lg font-bold text-amber-100">
+                    Tu Cesta de Café Fresco
+                  </h3>
                   <p className="text-xs text-zinc-400">
                     {totalItems} {totalItems === 1 ? 'paquete' : 'paquetes'} seleccionados
                   </p>
@@ -83,16 +134,31 @@ export function CartDrawer() {
                   <div className="w-16 h-16 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-600 mb-4">
                     <ShoppingBag className="w-8 h-8" />
                   </div>
-                  <h4 className="font-serif text-lg text-zinc-200 font-semibold mb-1">Tu cesta está vacía</h4>
+                  <h4 className="font-serif text-lg text-zinc-200 font-semibold mb-1">
+                    Tu cesta está vacía
+                  </h4>
                   <p className="text-xs text-zinc-400 max-w-xs mb-6">
                     Explora nuestros microlotes o pregúntale a Don Aurelio para recomendarte tu café según tu método preferido.
                   </p>
-                  <Button
-                    onClick={() => setIsCartOpen(false)}
-                    className="bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold rounded-full px-6"
-                  >
-                    Ver Colección de Cafés
-                  </Button>
+                  <div className="flex flex-col sm:flex-row gap-2.5">
+                    <Button
+                      onClick={() => setIsCartOpen(false)}
+                      className="bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold rounded-full px-5 cursor-pointer"
+                    >
+                      Ver Colección de Cafés
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsCartOpen(false);
+                        openSommelierWithCoffee(undefined, 'quiz');
+                      }}
+                      className="border-amber-500/40 text-amber-300 hover:bg-amber-500/10 rounded-full px-5 flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Test de Paladar</span>
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 items.map((item) => (
@@ -106,6 +172,7 @@ export function CartDrawer() {
                         src={item.product.image}
                         alt={item.product.name}
                         fill
+                        sizes="72px"
                         className="object-cover"
                       />
                     </div>
@@ -119,17 +186,39 @@ export function CartDrawer() {
                           </h4>
                           <button
                             onClick={() => removeItem(item.product.id, item.grindOption)}
-                            className="text-zinc-500 hover:text-red-400 transition-colors p-1"
+                            className="text-zinc-500 hover:text-red-400 transition-colors p-1 cursor-pointer"
                             title="Eliminar"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-amber-500/30 text-amber-300">
-                            {item.grindOption}
-                          </Badge>
-                          <span className="text-[11px] text-zinc-400">250g</span>
+
+                        {/* Editable Grind Option inside Cart */}
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <select
+                            value={item.grindOption}
+                            onChange={(e) =>
+                              updateGrind(
+                                item.product.id,
+                                item.grindOption,
+                                e.target.value as CartItem['grindOption']
+                              )
+                            }
+                            aria-label={`Cambiar molienda de ${item.product.name}`}
+                            className="text-[10px] bg-zinc-950 border border-amber-500/30 text-amber-300 rounded px-1.5 py-0.5 focus:outline-none focus:border-amber-400"
+                          >
+                            <option value="Grano Entero">Grano Entero</option>
+                            <option value="Molienda Media (V60 / Filtro)">
+                              Molienda Media (V60 / Filtro)
+                            </option>
+                            <option value="Molienda Fina (Espresso)">
+                              Molienda Fina (Espresso)
+                            </option>
+                            <option value="Molienda Gruesa (Prensa Francesa)">
+                              Molienda Gruesa (Prensa Francesa)
+                            </option>
+                          </select>
+                          <span className="text-[11px] text-zinc-400">{item.product.weightGrams}g</span>
                         </div>
                       </div>
 
@@ -137,15 +226,23 @@ export function CartDrawer() {
                       <div className="flex items-center justify-between mt-2">
                         <div className="flex items-center border border-zinc-700 rounded-lg bg-zinc-950/60 overflow-hidden">
                           <button
-                            onClick={() => updateQuantity(item.product.id, item.grindOption, item.quantity - 1)}
-                            className="p-1 hover:bg-zinc-800 text-zinc-300 transition-colors"
+                            onClick={() =>
+                              updateQuantity(item.product.id, item.grindOption, item.quantity - 1)
+                            }
+                            aria-label="Disminuir cantidad"
+                            className="p-1 hover:bg-zinc-800 text-zinc-300 transition-colors cursor-pointer"
                           >
                             <Minus className="w-3 h-3" />
                           </button>
-                          <span className="px-2.5 text-xs font-semibold text-zinc-100">{item.quantity}</span>
+                          <span className="px-2.5 text-xs font-semibold text-zinc-100">
+                            {item.quantity}
+                          </span>
                           <button
-                            onClick={() => updateQuantity(item.product.id, item.grindOption, item.quantity + 1)}
-                            className="p-1 hover:bg-zinc-800 text-zinc-300 transition-colors"
+                            onClick={() =>
+                              updateQuantity(item.product.id, item.grindOption, item.quantity + 1)
+                            }
+                            aria-label="Aumentar cantidad"
+                            className="p-1 hover:bg-zinc-800 text-zinc-300 transition-colors cursor-pointer"
                           >
                             <Plus className="w-3 h-3" />
                           </button>
@@ -164,11 +261,60 @@ export function CartDrawer() {
             {/* Footer Summary & Checkout */}
             {items.length > 0 && (
               <div className="p-6 border-t border-zinc-800 bg-[#0d0a09] space-y-4">
+                {/* Discount Coupon Row */}
+                <div>
+                  {appliedCoupon ? (
+                    <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-300">
+                      <span className="flex items-center gap-1.5 font-medium">
+                        <Tag className="w-3.5 h-3.5" /> Cupón <strong>{appliedCoupon}</strong> (-15%)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setAppliedCoupon(null)}
+                        className="text-zinc-400 hover:text-white text-[11px] cursor-pointer"
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={couponInput}
+                          onChange={(e) => {
+                            setCouponInput(e.target.value);
+                            setCouponError('');
+                          }}
+                          placeholder="Código de descuento (ej. AURA15)"
+                          className="flex-1 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-xs text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-amber-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleApplyCoupon}
+                          className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-amber-300 text-xs font-medium cursor-pointer transition-colors"
+                        >
+                          Aplicar
+                        </button>
+                      </div>
+                      {couponError && (
+                        <p className="text-[11px] text-red-400 pl-1">{couponError}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 <div className="space-y-1.5 text-xs text-zinc-400">
                   <div className="flex justify-between">
                     <span>Subtotal de café</span>
                     <span className="text-zinc-200 font-medium">${totalPrice.toFixed(2)} USD</span>
                   </div>
+                  {discountAmount > 0 && (
+                    <div className="flex justify-between text-emerald-400">
+                      <span>Descuento Club AURA (15%)</span>
+                      <span className="font-medium">-${discountAmount.toFixed(2)} USD</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span>Envío exprés 48h</span>
                     <span className="text-zinc-200 font-medium">
@@ -182,7 +328,11 @@ export function CartDrawer() {
                   <div className="flex justify-between text-base font-bold text-zinc-100 pt-2 border-t border-zinc-800">
                     <span>Total Estimado</span>
                     <span className="text-amber-400 font-serif">
-                      ${(totalPrice + (remainingForFreeShipping === 0 ? 0 : 4.5)).toFixed(2)} USD
+                      $
+                      {(
+                        subtotalAfterDiscount + (remainingForFreeShipping === 0 ? 0 : 4.5)
+                      ).toFixed(2)}{' '}
+                      USD
                     </span>
                   </div>
                 </div>
@@ -227,8 +377,9 @@ export function CartDrawer() {
               ¡Tu Pedido de Café está en Camino al Tostador!
             </DialogTitle>
             <DialogDescription className="text-center text-zinc-400 text-sm mt-2">
-              Hemos enviado la confirmación y la guía de tueste fresco a <strong className="text-amber-400">{customerEmail}</strong>. 
-              Tus granos serán empaquetados en bolsa con válvula desgasificadora unidireccional.
+              Hemos enviado la confirmación y la guía de tueste fresco a{' '}
+              <strong className="text-amber-400">{customerEmail}</strong>. Tus granos serán
+              empaquetados en bolsa con válvula desgasificadora unidireccional.
             </DialogDescription>
           </DialogHeader>
 
@@ -252,7 +403,7 @@ export function CartDrawer() {
               setCheckoutSuccess(false);
               setIsCartOpen(false);
             }}
-            className="w-full bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold rounded-xl py-2.5 mt-2"
+            className="w-full bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold rounded-xl py-2.5 mt-2 cursor-pointer"
           >
             Continuar Descubriendo Cafés
           </Button>

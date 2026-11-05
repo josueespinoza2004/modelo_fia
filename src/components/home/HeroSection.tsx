@@ -3,7 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { useCart } from '@/context/CartContext';
-import { Sparkles, ArrowDown, Award, Flame, Droplet, Compass } from 'lucide-react';
+import { Sparkles, ArrowDown, Flame } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -42,7 +42,7 @@ export function HeroSection() {
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2">
               <Button
-                onClick={() => openSommelierWithCoffee()}
+                onClick={() => openSommelierWithCoffee(undefined, 'quiz')}
                 id="hero-sommelier-quiz-btn"
                 className="w-full sm:w-auto bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 text-zinc-950 font-bold px-7 py-6 rounded-full text-base shadow-xl shadow-amber-600/30 hover:brightness-110 transition-all flex items-center justify-center gap-2.5 cursor-pointer group"
               >
@@ -95,6 +95,7 @@ export function HeroSection() {
                   alt="Extracción artesanal de café de especialidad V60"
                   fill
                   priority
+                  sizes="(max-width: 1024px) 100vw, 42vw"
                   className="object-cover"
                 />
 
