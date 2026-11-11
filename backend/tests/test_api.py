@@ -1,10 +1,12 @@
 from pathlib import Path
+import json
 import pytest
 from fastapi.testclient import TestClient
 
 from app.config import settings
 from app.database import init_db
 from app.main import app
+from app.services.sommelier_service import _split_stream_buffer
 
 
 @pytest.fixture(autouse=True)
@@ -178,4 +180,49 @@ def test_commerce_coupon_order_and_newsletter():
         )
         assert news.status_code == 200
         assert news.json()["couponCode"] == "AURA15"
+
+
+def test_split_stream_buffer_holds_recommended_tag():
+    safe1, buf1 = _split_stream_buffer("Texto normal [1] y luego [RECO")
+    assert safe1 == "Texto normal [1] y luego "
+    assert buf1 == "[RECO"
+
+    safe2, buf2 = _split_stream_buffer(buf1 + "MMENDED: geisha-la-esmeralda]")
+    assert safe2 == ""
+    assert buf2 == ""
+
+
+def test_sommelier_streaming_endpoint(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(settings, "GROQ_API_KEY", "")
+
+    with TestClient(app) as client:
+        bad = client.post("/api/sommelier/stream", json={"message": "  "})
+        assert bad.status_code == 400
+
+        with client.stream(
+            "POST",
+            "/api/sommelier/stream",
+            json={
+                "sessionId": "stream-session-1",
+                "message": "Tengo una Chemex y quiero notas florales",
+            },
+        ) as response:
+            assert response.status_code == 200
+            events = []
+            for line in response.iter_lines():
+                if line.startswith("data: "):
+                    events.append(json.loads(line[6:]))
+
+        event_types = [e["type"] for e in events]
+        assert event_types[0] == "memory"
+        assert "delta" in event_types
+        assert event_types[-1] == "done"
+
+        done_evt = events[-1]
+        assert done_evt["updatedMemory"]["preferredMethod"] == "Chemex"
+        assert "geisha-la-esmeralda" in done_evt["recommendedProductIds"]
+        assert len(done_evt["recommendedProducts"]) >= 1
+
+        delta_joined = "".join(e["content"] for e in events if e["type"] == "delta")
+        assert delta_joined == done_evt["reply"]
 

@@ -1,9 +1,13 @@
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from app.database import clear_session_chat, clear_session_memory, get_session
 from app.models.schemas import QuizRequest, QuizResponse, SommelierRequest, SommelierResponse
-from app.services.sommelier_service import ask_sommelier, evaluate_taste_quiz
+from app.services.sommelier_service import (
+    ask_sommelier,
+    evaluate_taste_quiz,
+    stream_sommelier,
+)
 
 router = APIRouter(prefix="/api/sommelier", tags=["Sommelier AI"])
 
@@ -21,6 +25,30 @@ async def chat_with_sommelier(payload: SommelierRequest):
         history=payload.history,
         prev_memory=payload.userMemory,
         session_id=payload.sessionId,
+    )
+
+
+@router.post("/stream")
+async def stream_chat_with_sommelier(payload: SommelierRequest):
+    if not payload.message or not payload.message.strip():
+        return JSONResponse(
+            status_code=400,
+            content={"success": False, "error": "Mensaje requerido"},
+        )
+
+    return StreamingResponse(
+        stream_sommelier(
+            message=payload.message,
+            history=payload.history,
+            prev_memory=payload.userMemory,
+            session_id=payload.sessionId,
+        ),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )
 
 

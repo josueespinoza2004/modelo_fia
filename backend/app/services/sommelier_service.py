@@ -1,4 +1,7 @@
+import asyncio
+from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
+import json
 import re
 from typing import Literal
 
@@ -373,17 +376,54 @@ def _parse_recommendations(reply_content: str) -> tuple[str, list[str]]:
     return clean_reply, valid_ids
 
 
-async def ask_sommelier(
+RECOMMENDED_PREFIX = "[RECOMMENDED:"
+
+
+def _split_stream_buffer(pending: str) -> tuple[str, str]:
+    """Emite texto seguro y retiene cualquier sufijo potencial de [RECOMMENDED: ...]."""
+    output_parts: list[str] = []
+    pos = 0
+    length = len(pending)
+
+    while pos < length:
+        bracket_idx = pending.find("[", pos)
+        if bracket_idx == -1:
+            output_parts.append(pending[pos:])
+            break
+
+        if bracket_idx > pos:
+            output_parts.append(pending[pos:bracket_idx])
+
+        tail = pending[bracket_idx:]
+        upper_tail = tail.upper()
+
+        if len(upper_tail) < len(RECOMMENDED_PREFIX):
+            if RECOMMENDED_PREFIX.startswith(upper_tail):
+                return "".join(output_parts), tail
+            output_parts.append("[")
+            pos = bracket_idx + 1
+        elif upper_tail.startswith(RECOMMENDED_PREFIX):
+            close_idx = tail.find("]")
+            if close_idx == -1:
+                return "".join(output_parts), tail
+            pos = bracket_idx + close_idx + 1
+        else:
+            output_parts.append("[")
+            pos = bracket_idx + 1
+
+    return "".join(output_parts), ""
+
+
+def _prepare_sommelier_context(
     message: str,
     history: list[HistoryMessage],
     prev_memory: UserPalateMemory | None = None,
     session_id: str | None = None,
-) -> SommelierResponse:
+) -> tuple[str, UserPalateMemory, list[dict], list[dict[str, str]]]:
     clean_message = message.strip()[:600]
-
-    # Si viene session_id y la memoria entrante está vacía, recuperar de SQLite
     effective_prev_memory = prev_memory or UserPalateMemory()
     stored_messages: list[dict] = []
+
     if session_id:
         session_data = get_session(session_id)
         stored_messages = session_data["messages"]
@@ -399,6 +439,58 @@ async def ask_sommelier(
             effective_prev_memory = session_data["userMemory"]
 
     updated_memory = extract_and_merge_memory(clean_message, effective_prev_memory)
+    recent_history = history[-6:]
+    groq_messages = [
+        {"role": "system", "content": build_system_prompt(updated_memory)},
+        *[
+            {
+                "role": "user" if m.role == "user" else "assistant",
+                "content": str(m.content or "")[:800],
+            }
+            for m in recent_history
+        ],
+        {"role": "user", "content": clean_message},
+    ]
+    return clean_message, updated_memory, stored_messages, groq_messages
+
+
+def _persist_sommelier_turn(
+    session_id: str | None,
+    stored_messages: list[dict],
+    updated_memory: UserPalateMemory,
+    clean_message: str,
+    clean_reply: str,
+    recommended_ids: list[str],
+) -> None:
+    if not session_id:
+        return
+    now_id = int(datetime.now(timezone.utc).timestamp() * 1000)
+    new_history = [
+        *stored_messages,
+        {"id": f"user-{now_id}", "role": "user", "content": clean_message},
+        {
+            "id": f"assistant-{now_id + 1}",
+            "role": "assistant",
+            "content": clean_reply,
+            "recommendedProductIds": recommended_ids,
+        },
+    ]
+    save_session(session_id, updated_memory, new_history)
+
+
+def _sse_event(payload: dict) -> str:
+    return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+
+async def ask_sommelier(
+    message: str,
+    history: list[HistoryMessage],
+    prev_memory: UserPalateMemory | None = None,
+    session_id: str | None = None,
+) -> SommelierResponse:
+    clean_message, updated_memory, stored_messages, groq_messages = (
+        _prepare_sommelier_context(message, history, prev_memory, session_id)
+    )
 
     engine: Literal["groq", "local-fallback"] = "groq"
     clean_reply = ""
@@ -412,19 +504,6 @@ async def ask_sommelier(
     else:
         try:
             client = AsyncGroq(api_key=settings.GROQ_API_KEY)
-            recent_history = history[-6:]
-            groq_messages = [
-                {"role": "system", "content": build_system_prompt(updated_memory)},
-                *[
-                    {
-                        "role": "user" if m.role == "user" else "assistant",
-                        "content": str(m.content or "")[:800],
-                    }
-                    for m in recent_history
-                ],
-                {"role": "user", "content": clean_message},
-            ]
-
             completion = await client.chat.completions.create(
                 model=settings.GROQ_MODEL,
                 messages=groq_messages,  # type: ignore[arg-type]
@@ -450,19 +529,14 @@ async def ask_sommelier(
         COFFEE_BY_ID[pid] for pid in recommended_ids if pid in COFFEE_BY_ID
     ]
 
-    if session_id:
-        now_id = int(datetime.now(timezone.utc).timestamp() * 1000)
-        new_history = [
-            *stored_messages,
-            {"id": f"user-{now_id}", "role": "user", "content": clean_message},
-            {
-                "id": f"assistant-{now_id + 1}",
-                "role": "assistant",
-                "content": clean_reply,
-                "recommendedProductIds": recommended_ids,
-            },
-        ]
-        save_session(session_id, updated_memory, new_history)
+    _persist_sommelier_turn(
+        session_id,
+        stored_messages,
+        updated_memory,
+        clean_message,
+        clean_reply,
+        recommended_ids,
+    )
 
     return SommelierResponse(
         success=True,
@@ -471,6 +545,112 @@ async def ask_sommelier(
         recommendedProducts=recommended_products,
         updatedMemory=updated_memory,
         engine=engine,
+    )
+
+
+async def stream_sommelier(
+    message: str,
+    history: list[HistoryMessage],
+    prev_memory: UserPalateMemory | None = None,
+    session_id: str | None = None,
+) -> AsyncGenerator[str, None]:
+    """Transmite la respuesta del Sommelier por SSE token por token."""
+    clean_message, updated_memory, stored_messages, groq_messages = (
+        _prepare_sommelier_context(message, history, prev_memory, session_id)
+    )
+
+    # Enviar inmediatamente la memoria sensorial detectada al cliente
+    yield _sse_event(
+        {
+            "type": "memory",
+            "updatedMemory": updated_memory.model_dump(),
+        }
+    )
+
+    engine: Literal["groq", "local-fallback"] = "groq"
+    clean_reply = ""
+    recommended_ids: list[str] = []
+    streamed_any_text = False
+
+    if settings.GROQ_API_KEY:
+        try:
+            client = AsyncGroq(api_key=settings.GROQ_API_KEY)
+            stream = await client.chat.completions.create(
+                model=settings.GROQ_MODEL,
+                messages=groq_messages,  # type: ignore[arg-type]
+                temperature=0.3,
+                max_tokens=1600,
+                stream=True,
+            )
+
+            full_raw_parts: list[str] = []
+            pending_buffer = ""
+
+            async for chunk in stream:
+                delta = chunk.choices[0].delta if chunk.choices else None
+                piece = delta.content if delta and delta.content else ""
+                if not piece:
+                    continue
+
+                full_raw_parts.append(piece)
+                pending_buffer += piece
+                safe_to_emit, pending_buffer = _split_stream_buffer(pending_buffer)
+                if safe_to_emit:
+                    streamed_any_text = True
+                    yield _sse_event({"type": "delta", "content": safe_to_emit})
+
+            raw_content = "".join(full_raw_parts)
+            clean_reply, recommended_ids = _parse_recommendations(raw_content)
+
+            # Emitir cualquier resto seguro no retenido como etiqueta
+            if pending_buffer and not pending_buffer.upper().startswith(RECOMMENDED_PREFIX):
+                streamed_any_text = True
+                yield _sse_event({"type": "delta", "content": pending_buffer})
+
+        except Exception as exc:
+            print(f"[Sommelier Stream] Error llamando a Groq, usando fallback local: {exc}")
+            engine = "local-fallback"
+            clean_reply = ""
+    else:
+        engine = "local-fallback"
+
+    # Si Groq falló o no devolvió texto, hacer streaming suave del motor adaptativo local
+    if not clean_reply:
+        engine = "local-fallback"
+        clean_reply, recommended_ids = build_local_sommelier_response(
+            clean_message, updated_memory
+        )
+        if not streamed_any_text:
+            tokens = re.findall(r"\S+\s*", clean_reply)
+            batch_size = 3
+            for idx in range(0, len(tokens), batch_size):
+                chunk_text = "".join(tokens[idx : idx + batch_size])
+                yield _sse_event({"type": "delta", "content": chunk_text})
+                await asyncio.sleep(0.02)
+
+    recommended_products: list[CoffeeProduct] = [
+        COFFEE_BY_ID[pid] for pid in recommended_ids if pid in COFFEE_BY_ID
+    ]
+
+    _persist_sommelier_turn(
+        session_id,
+        stored_messages,
+        updated_memory,
+        clean_message,
+        clean_reply,
+        recommended_ids,
+    )
+
+    yield _sse_event(
+        {
+            "type": "done",
+            "success": True,
+            "reply": clean_reply,
+            "recommendedProductIds": recommended_ids,
+            "recommendedProducts": [p.model_dump() for p in recommended_products],
+            "updatedMemory": updated_memory.model_dump(),
+            "engine": engine,
+        }
     )
 
 

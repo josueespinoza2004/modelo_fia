@@ -76,6 +76,94 @@ export async function sendSommelierChat(payload: {
   return res.json();
 }
 
+export interface StreamSommelierHandlers {
+  onMemory?: (memory: UserPalateMemory) => void;
+  onDelta: (chunk: string) => void;
+  onDone: (data: SommelierChatResponse) => void;
+  signal?: AbortSignal;
+}
+
+export async function streamSommelierChat(
+  payload: {
+    message: string;
+    history: Array<{ role: string; content: string }>;
+    userMemory: UserPalateMemory;
+    sessionId?: string;
+  },
+  handlers: StreamSommelierHandlers
+): Promise<void> {
+  const res = await fetch('/api/sommelier/stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    signal: handlers.signal,
+  });
+
+  if (!res.ok) {
+    let errMsg = 'Error al conectar con el Sommelier';
+    try {
+      const errData = await res.json();
+      if (errData?.error) errMsg = errData.error;
+    } catch {
+      // Ignorar si no es JSON
+    }
+    throw new Error(errMsg);
+  }
+
+  if (!res.body) {
+    throw new Error('El navegador no soporta streaming de respuesta');
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let buffer = '';
+
+  const processBlock = (rawBlock: string) => {
+    const lines = rawBlock.split(/\r?\n/);
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const rawJson = line.slice(6).trim();
+      if (!rawJson) continue;
+      const evt = JSON.parse(rawJson);
+      if (evt.type === 'memory' && evt.updatedMemory) {
+        handlers.onMemory?.(evt.updatedMemory);
+      } else if (evt.type === 'delta' && typeof evt.content === 'string') {
+        handlers.onDelta(evt.content);
+      } else if (evt.type === 'done') {
+        handlers.onDone({
+          success: true,
+          reply: evt.reply,
+          recommendedProductIds: evt.recommendedProductIds || [],
+          recommendedProducts: evt.recommendedProducts || [],
+          updatedMemory: evt.updatedMemory,
+          engine: evt.engine,
+        });
+      }
+    }
+  };
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    let sepIdx: number;
+    while ((sepIdx = buffer.search(/\r?\n\r?\n/)) !== -1) {
+      const block = buffer.slice(0, sepIdx);
+      const match = buffer.slice(sepIdx).match(/^\r?\n\r?\n/);
+      buffer = buffer.slice(sepIdx + (match ? match[0].length : 2));
+      if (block.trim()) {
+        processBlock(block);
+      }
+    }
+  }
+
+  const tail = buffer + decoder.decode();
+  if (tail.trim()) {
+    processBlock(tail);
+  }
+}
+
 export async function submitTasteQuiz(payload: {
   method: BrewMethod;
   flavor: 'floral' | 'frutal' | 'chocolate' | 'decaf';

@@ -8,7 +8,7 @@ import {
   fetchSommelierSession,
   forgetSommelierSessionMemory,
   resetSommelierSessionChat,
-  sendSommelierChat,
+  streamSommelierChat,
   submitTasteQuiz,
 } from '@/lib/api';
 import { CoffeeProduct, BrewMethod, CartItem, UserPalateMemory } from '@/types/coffee';
@@ -16,6 +16,7 @@ import {
   Sparkles,
   X,
   Send,
+  Square,
   Coffee,
   Check,
   RotateCcw,
@@ -130,11 +131,13 @@ export function SommelierModal() {
   const [userMemory, setUserMemory] = useState<UserPalateMemory>({});
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const [cardGrinds, setCardGrinds] = useState<Record<string, CartItem['grindOption']>>({});
   const [addedFeedback, setAddedFeedback] = useState<Record<string, boolean>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesRef = useRef<Message[]>(messages);
   const memoryRef = useRef<UserPalateMemory>(userMemory);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Estado del Quiz Sensorial
   const [quizStep, setQuizStep] = useState(1);
@@ -208,16 +211,29 @@ export function SommelierModal() {
     }
   }, [userMemory]);
 
+  const handleStopStream = useCallback(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setIsLoading(false);
+    setStreamingMessageId(null);
+  }, []);
+
   const handleSendPrompt = useCallback(
     async (textToSend?: string) => {
       const text = (textToSend ?? inputMessage).trim();
       if (!text) return;
 
+      abortControllerRef.current?.abort();
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
+      const now = Date.now();
       const userMsg: Message = {
-        id: `user-${Date.now()}`,
+        id: `user-${now}`,
         role: 'user',
         content: text,
       };
+      const assistantMsgId = `assistant-${now + 1}`;
 
       const currentHistory = messagesRef.current.slice(-5).map((m) => ({
         role: m.role,
@@ -229,58 +245,107 @@ export function SommelierModal() {
         setInputMessage('');
       }
       setIsLoading(true);
+      setStreamingMessageId(null);
+
+      let bubbleCreated = false;
 
       try {
-        const data = await sendSommelierChat({
-          message: text,
-          history: currentHistory,
-          userMemory: memoryRef.current,
-          sessionId: sessionId || undefined,
-        });
-
-        if (data.updatedMemory) {
-          setUserMemory(data.updatedMemory);
-        }
-
-        if (data.success && data.reply) {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: `assistant-${Date.now()}`,
-              role: 'assistant',
-              content: data.reply!,
-              recommendedProductIds: data.recommendedProductIds,
-              recommendedProducts: data.recommendedProducts,
+        await streamSommelierChat(
+          {
+            message: text,
+            history: currentHistory,
+            userMemory: memoryRef.current,
+            sessionId: sessionId || undefined,
+          },
+          {
+            signal: controller.signal,
+            onMemory: (updatedMemory) => {
+              setUserMemory(updatedMemory);
             },
-          ]);
-        } else {
+            onDelta: (chunk) => {
+              if (!bubbleCreated) {
+                bubbleCreated = true;
+                setIsLoading(false);
+                setStreamingMessageId(assistantMsgId);
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    id: assistantMsgId,
+                    role: 'assistant',
+                    content: chunk,
+                  },
+                ]);
+              } else {
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantMsgId
+                      ? { ...m, content: m.content + chunk }
+                      : m
+                  )
+                );
+              }
+            },
+            onDone: (data) => {
+              if (data.updatedMemory) {
+                setUserMemory(data.updatedMemory);
+              }
+              setMessages((prev) => {
+                if (!bubbleCreated) {
+                  bubbleCreated = true;
+                  return [
+                    ...prev,
+                    {
+                      id: assistantMsgId,
+                      role: 'assistant',
+                      content: data.reply || '',
+                      recommendedProductIds: data.recommendedProductIds,
+                      recommendedProducts: data.recommendedProducts,
+                    },
+                  ];
+                }
+                return prev.map((m) =>
+                  m.id === assistantMsgId
+                    ? {
+                        ...m,
+                        content: data.reply || m.content,
+                        recommendedProductIds: data.recommendedProductIds,
+                        recommendedProducts: data.recommendedProducts,
+                      }
+                    : m
+                );
+              });
+            },
+          }
+        );
+      } catch (err) {
+        if ((err as Error)?.name !== 'AbortError') {
           setMessages((prev) => [
             ...prev,
             {
               id: `err-${Date.now()}`,
               role: 'assistant',
               content:
-                data.error ||
-                'Disculpa, el laboratorio está calibrando el tostador. Intenta nuevamente en un momento.',
+                'No fue posible conectar con el servidor backend en Python (puerto 8000). Verifica que FastAPI esté corriendo e intenta nuevamente.',
             },
           ]);
         }
-      } catch {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `err-${Date.now()}`,
-            role: 'assistant',
-            content:
-              'No fue posible conectar con el servidor backend en Python (puerto 8000). Verifica que FastAPI esté corriendo e intenta nuevamente.',
-          },
-        ]);
       } finally {
+        if (abortControllerRef.current === controller) {
+          abortControllerRef.current = null;
+        }
         setIsLoading(false);
+        setStreamingMessageId(null);
       }
     },
     [inputMessage, sessionId]
   );
+
+  // Cancelar stream activo al cerrar modal o desmontar
+  useEffect(() => {
+    if (!isSommelierOpen) {
+      abortControllerRef.current?.abort();
+    }
+  }, [isSommelierOpen]);
 
   // Si se abre con un café específico seleccionado desde el catálogo (sin duplicar mensaje)
   useEffect(() => {
@@ -305,12 +370,15 @@ export function SommelierModal() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
 
+  const isBusy = isLoading || streamingMessageId !== null;
+
   const handleQuickQuestion = (question: string) => {
-    if (isLoading) return;
+    if (isBusy) return;
     handleSendPrompt(question);
   };
 
   const handleResetChat = async () => {
+    handleStopStream();
     setMessages([INITIAL_WELCOME_MESSAGE]);
     try {
       localStorage.removeItem('aura_sommelier_chat');
@@ -564,7 +632,15 @@ export function SommelierModal() {
                       }`}
                     >
                       {msg.role === 'assistant' ? (
-                        <FormattedMessage content={msg.content} />
+                        <>
+                          <FormattedMessage content={msg.content} />
+                          {streamingMessageId === msg.id && (
+                            <span
+                              aria-label="Escribiendo..."
+                              className="inline-block w-2 h-4 ml-1 align-middle bg-amber-400 animate-pulse rounded-xs"
+                            />
+                          )}
+                        </>
                       ) : (
                         <p className="whitespace-pre-wrap">{msg.content}</p>
                       )}
@@ -700,7 +776,7 @@ export function SommelierModal() {
               {userMemory.preferredMethod ? (
                 <button
                   type="button"
-                  disabled={isLoading}
+                  disabled={isBusy}
                   onClick={() =>
                     handleQuickQuestion(
                       `Según lo que recuerdas de mi perfil y mi ${userMemory.preferredMethod}, ¿cuál otro café me recomiendas probar?`
@@ -713,7 +789,7 @@ export function SommelierModal() {
               ) : (
                 <button
                   type="button"
-                  disabled={isLoading}
+                  disabled={isBusy}
                   onClick={() =>
                     handleQuickQuestion('¿Qué café me recomiendas para V60 que no sea ácido?')
                   }
@@ -724,7 +800,7 @@ export function SommelierModal() {
               )}
               <button
                 type="button"
-                disabled={isLoading}
+                disabled={isBusy}
                 onClick={() =>
                   handleQuickQuestion(
                     'Quiero un café con notas a chocolate intenso para tomar con leche'
@@ -736,7 +812,7 @@ export function SommelierModal() {
               </button>
               <button
                 type="button"
-                disabled={isLoading}
+                disabled={isBusy}
                 onClick={() =>
                   handleQuickQuestion(
                     'Explícame por qué el café Geisha de Panamá es tan famoso y especial'
@@ -748,7 +824,7 @@ export function SommelierModal() {
               </button>
               <button
                 type="button"
-                disabled={isLoading}
+                disabled={isBusy}
                 onClick={() =>
                   handleQuickQuestion(
                     'Tengo reflujo o gastritis leve, ¿cuál grano me conviene?'
@@ -764,7 +840,7 @@ export function SommelierModal() {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                handleSendPrompt();
+                if (!isBusy) handleSendPrompt();
               }}
               className="p-4 border-t border-amber-600/20 bg-[#16110e] flex items-center gap-2"
             >
@@ -776,14 +852,25 @@ export function SommelierModal() {
                 placeholder="Pregúntale a Don Aurelio (ej: 'Tengo una Prensa Francesa y me gustan los cafés frutales')..."
                 className="flex-1 bg-zinc-900/90 border border-zinc-700 text-sm text-zinc-100 placeholder:text-zinc-500 px-4 py-3 rounded-xl focus:outline-none focus:border-amber-500 transition-colors"
               />
-              <Button
-                type="submit"
-                disabled={!inputMessage.trim() || isLoading}
-                className="bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold px-4 py-3 rounded-xl flex items-center gap-2 cursor-pointer transition-all"
-              >
-                <Send className="w-4 h-4" />
-                <span className="hidden sm:inline">Enviar</span>
-              </Button>
+              {isBusy ? (
+                <Button
+                  type="button"
+                  onClick={handleStopStream}
+                  className="bg-zinc-800 hover:bg-zinc-700 text-amber-300 border border-amber-500/40 font-semibold px-4 py-3 rounded-xl flex items-center gap-2 cursor-pointer transition-all"
+                >
+                  <Square className="w-3.5 h-3.5 fill-amber-300" />
+                  <span className="hidden sm:inline">Detener</span>
+                </Button>
+              ) : (
+                <Button
+                  type="submit"
+                  disabled={!inputMessage.trim()}
+                  className="bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold px-4 py-3 rounded-xl flex items-center gap-2 cursor-pointer transition-all"
+                >
+                  <Send className="w-4 h-4" />
+                  <span className="hidden sm:inline">Enviar</span>
+                </Button>
+              )}
             </form>
           </div>
         )}
