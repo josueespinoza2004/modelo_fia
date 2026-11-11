@@ -4,7 +4,13 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import confetti from 'canvas-confetti';
 import { useCart } from '@/context/CartContext';
-import { COFFEE_PRODUCTS } from '@/data/coffeeCatalog';
+import {
+  fetchSommelierSession,
+  forgetSommelierSessionMemory,
+  resetSommelierSessionChat,
+  sendSommelierChat,
+  submitTasteQuiz,
+} from '@/lib/api';
 import { CoffeeProduct, BrewMethod, CartItem, UserPalateMemory } from '@/types/coffee';
 import {
   Sparkles,
@@ -29,6 +35,7 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   recommendedProductIds?: string[];
+  recommendedProducts?: CoffeeProduct[];
 }
 
 const INITIAL_WELCOME_MESSAGE: Message = {
@@ -107,6 +114,8 @@ function FormattedMessage({ content }: { content: string }) {
 
 export function SommelierModal() {
   const {
+    products,
+    sessionId,
     isSommelierOpen,
     setIsSommelierOpen,
     sommelierTab,
@@ -134,31 +143,51 @@ export function SommelierModal() {
   const [quizMilk, setQuizMilk] = useState<'solo' | 'con-leche'>('solo');
   const [quizResult, setQuizResult] = useState<CoffeeProduct | null>(null);
   const [quizRunnerUp, setQuizRunnerUp] = useState<CoffeeProduct | null>(null);
+  const [quizMatchScore, setQuizMatchScore] = useState<number>(98.4);
   const [quizGrind, setQuizGrind] = useState<CartItem['grindOption']>('Molienda Media (V60 / Filtro)');
+  const [isQuizLoading, setIsQuizLoading] = useState(false);
 
-  // Cargar conversación y memoria guardadas en localStorage
+  // Cargar conversación y memoria desde el backend Python (y cache local)
   useEffect(() => {
-    queueMicrotask(() => {
+    if (!sessionId) return;
+    let cancelled = false;
+    (async () => {
       try {
-        const savedChat = localStorage.getItem('aura_sommelier_chat');
-        if (savedChat) {
-          const parsed = JSON.parse(savedChat);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setMessages(parsed);
-          }
+        const sessionData = await fetchSommelierSession(sessionId);
+        if (cancelled) return;
+        if (Array.isArray(sessionData.messages) && sessionData.messages.length > 0) {
+          setMessages([INITIAL_WELCOME_MESSAGE, ...sessionData.messages]);
         }
-        const savedMem = localStorage.getItem('aura_user_memory');
-        if (savedMem) {
-          const parsedMem = JSON.parse(savedMem);
-          if (parsedMem && typeof parsedMem === 'object') {
-            setUserMemory(parsedMem);
-          }
+        if (sessionData.userMemory && typeof sessionData.userMemory === 'object') {
+          setUserMemory(sessionData.userMemory);
         }
       } catch {
-        // Ignorar errores de localStorage
+        // Fallback silencioso a localStorage si la sesión aún no existe en backend
+        try {
+          const savedChat = localStorage.getItem('aura_sommelier_chat');
+          if (savedChat) {
+            const parsed = JSON.parse(savedChat);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setMessages(parsed);
+            }
+          }
+          const savedMem = localStorage.getItem('aura_user_memory');
+          if (savedMem) {
+            const parsedMem = JSON.parse(savedMem);
+            if (parsedMem && typeof parsedMem === 'object') {
+              setUserMemory(parsedMem);
+            }
+          }
+        } catch {
+          // Ignorar errores de localStorage
+        }
       }
-    });
-  }, []);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId]);
 
   // Sincronizar refs y guardar conversación y memoria en localStorage
   useEffect(() => {
@@ -202,17 +231,12 @@ export function SommelierModal() {
       setIsLoading(true);
 
       try {
-        const res = await fetch('/api/sommelier', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message: text,
-            history: currentHistory,
-            userMemory: memoryRef.current,
-          }),
+        const data = await sendSommelierChat({
+          message: text,
+          history: currentHistory,
+          userMemory: memoryRef.current,
+          sessionId: sessionId || undefined,
         });
-
-        const data = await res.json();
 
         if (data.updatedMemory) {
           setUserMemory(data.updatedMemory);
@@ -224,8 +248,9 @@ export function SommelierModal() {
             {
               id: `assistant-${Date.now()}`,
               role: 'assistant',
-              content: data.reply,
+              content: data.reply!,
               recommendedProductIds: data.recommendedProductIds,
+              recommendedProducts: data.recommendedProducts,
             },
           ]);
         } else {
@@ -235,8 +260,8 @@ export function SommelierModal() {
               id: `err-${Date.now()}`,
               role: 'assistant',
               content:
-                'Disculpa, el laboratorio está calibrando el tostador. Para cafés de método **V60** te recomiendo nuestro **Geisha La Esmeralda**, y para **espresso o leche** el **Pacamara Black Honey**.',
-              recommendedProductIds: ['geisha-la-esmeralda', 'pacamara-black-honey-dipilto'],
+                data.error ||
+                'Disculpa, el laboratorio está calibrando el tostador. Intenta nuevamente en un momento.',
             },
           ]);
         }
@@ -247,15 +272,14 @@ export function SommelierModal() {
             id: `err-${Date.now()}`,
             role: 'assistant',
             content:
-              'Tuvimos un breve lapso de conexión con la barra. Nuestro grano insigne es el **Geisha Finca La Esmeralda** (SCA 91.5 pts), pruébalo en método filtrado.',
-            recommendedProductIds: ['geisha-la-esmeralda'],
+              'No fue posible conectar con el servidor backend en Python (puerto 8000). Verifica que FastAPI esté corriendo e intenta nuevamente.',
           },
         ]);
       } finally {
         setIsLoading(false);
       }
     },
-    [inputMessage]
+    [inputMessage, sessionId]
   );
 
   // Si se abre con un café específico seleccionado desde el catálogo (sin duplicar mensaje)
@@ -286,19 +310,25 @@ export function SommelierModal() {
     handleSendPrompt(question);
   };
 
-  const handleResetChat = () => {
+  const handleResetChat = async () => {
     setMessages([INITIAL_WELCOME_MESSAGE]);
     try {
       localStorage.removeItem('aura_sommelier_chat');
+      if (sessionId) {
+        await resetSommelierSessionChat(sessionId);
+      }
     } catch {
       // Ignorar
     }
   };
 
-  const handleClearMemory = () => {
+  const handleClearMemory = async () => {
     setUserMemory({});
     try {
       localStorage.removeItem('aura_user_memory');
+      if (sessionId) {
+        await forgetSommelierSessionMemory(sessionId);
+      }
     } catch {
       // Ignorar
     }
@@ -320,75 +350,46 @@ export function SommelierModal() {
     }
   };
 
-  // Algoritmo multicriterio de emparejamiento del Quiz + actualización de Memoria Sensorial
-  const handleCalculateMatch = (milkChoice: 'solo' | 'con-leche') => {
+  // Test de Paladar ejecutado completamente en el backend Python
+  const handleCalculateMatch = async (milkChoice: 'solo' | 'con-leche') => {
     setQuizMilk(milkChoice);
-    setQuizGrind(getDefaultGrindForMethod(quizMethod));
-
-    // Guardar en la memoria adaptativa del usuario lo aprendido en el Quiz
-    setUserMemory((prev) => ({
-      ...prev,
-      preferredMethod: quizMethod,
-      flavorPreference: quizFlavor,
-      milkPreference: milkChoice,
-      lastUpdated: new Date().toISOString(),
-    }));
-
-    const scored = COFFEE_PRODUCTS.map((product) => {
-      let score = 0;
-
-      // 1. Afinidad por familia de sabor
-      if (quizFlavor === 'decaf') {
-        if (product.id === 'sugarcane-decaf-caldas') score += 100;
-      } else if (quizFlavor === 'floral') {
-        if (product.flavorCategory === 'floral-citrico') score += 45;
-        if (product.acidity >= 4) score += 10;
-      } else if (quizFlavor === 'frutal') {
-        if (product.flavorCategory === 'frutal-exotico') score += 45;
-        if (product.id === 'kenya-aa-nyeri') score += 25;
-      } else if (quizFlavor === 'chocolate') {
-        if (product.flavorCategory === 'chocolate-caramelo') score += 45;
-        if (product.flavorCategory === 'dulce-sedoso') score += 30;
-      }
-
-      // 2. Afinidad por método de extracción
-      if (product.recommendedBrews.includes(quizMethod)) {
-        score += 30;
-      }
-
-      // Ajuste específico por método
-      if (quizMethod === 'Chemex' && product.id === 'geisha-la-esmeralda') score += 12;
-      if (quizMethod === 'Aeropress' && product.id === 'bourbon-rosado-huila') score += 15;
-      if (quizMethod === 'V60' && product.id === 'kenya-aa-nyeri' && quizFlavor === 'floral') {
-        score += 10;
-      }
-
-      // 3. Afinidad por leche vs café negro
-      if (milkChoice === 'con-leche') {
-        if (product.body >= 4) score += 20;
-        if (product.id === 'pacamara-black-honey-dipilto') score += 25;
-        if (product.id === 'sugarcane-decaf-caldas') score += 15;
-        if (product.roastLevel === 'Ligero') score -= 15;
-      } else {
-        if (product.scaScore >= 89) score += 12;
-      }
-
-      return { product, score };
-    }).sort((a, b) => b.score - a.score);
-
-    setQuizResult(scored[0].product);
-    setQuizRunnerUp(scored[1]?.product || null);
-    setQuizStep(4);
-
+    setIsQuizLoading(true);
     try {
-      confetti({
-        particleCount: 65,
-        spread: 60,
-        origin: { y: 0.6 },
-        colors: ['#d97706', '#f59e0b', '#78350f'],
+      const result = await submitTasteQuiz({
+        method: quizMethod,
+        flavor: quizFlavor,
+        milk: milkChoice,
+        userMemory: memoryRef.current,
+        sessionId: sessionId || undefined,
       });
+
+      setQuizResult(result.winner);
+      setQuizRunnerUp(result.runnerUp || null);
+      setQuizMatchScore(result.matchScore);
+      setQuizGrind(result.recommendedGrind);
+      setUserMemory(result.updatedMemory);
+      setQuizStep(4);
+
+      try {
+        confetti({
+          particleCount: 65,
+          spread: 60,
+          origin: { y: 0.6 },
+          colors: ['#d97706', '#f59e0b', '#78350f'],
+        });
+      } catch {
+        // Ignorar si confetti falla
+      }
     } catch {
-      // Ignorar si confetti falla
+      // Si el backend no responde, mostrar fallback amigable desde productos cargados
+      if (products.length > 0) {
+        setQuizResult(products[0]);
+        setQuizRunnerUp(products[1] || null);
+        setQuizGrind(getDefaultGrindForMethod(quizMethod));
+        setQuizStep(4);
+      }
+    } finally {
+      setIsQuizLoading(false);
     }
   };
 
@@ -577,7 +578,9 @@ export function SommelierModal() {
                         </span>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                           {msg.recommendedProductIds.map((id) => {
-                            const coffee = COFFEE_PRODUCTS.find((c) => c.id === id);
+                            const coffee =
+                              msg.recommendedProducts?.find((c) => c.id === id) ||
+                              products.find((c) => c.id === id);
                             if (!coffee) return null;
                             const defaultGrind = getDefaultGrindForMethod(
                               userMemory.preferredMethod
@@ -928,8 +931,9 @@ export function SommelierModal() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                   <button
+                    disabled={isQuizLoading}
                     onClick={() => handleCalculateMatch('solo')}
-                    className="p-5 rounded-xl text-left border bg-zinc-900/60 border-zinc-800 hover:border-amber-500 text-zinc-200 cursor-pointer transition-all hover:bg-amber-500/10"
+                    className="p-5 rounded-xl text-left border bg-zinc-900/60 border-zinc-800 hover:border-amber-500 text-zinc-200 cursor-pointer transition-all hover:bg-amber-500/10 disabled:opacity-50"
                   >
                     <span className="text-2xl mb-2 block">☕</span>
                     <h5 className="font-semibold text-base text-zinc-100">Puro / Café Negro</h5>
@@ -939,8 +943,9 @@ export function SommelierModal() {
                   </button>
 
                   <button
+                    disabled={isQuizLoading}
                     onClick={() => handleCalculateMatch('con-leche')}
-                    className="p-5 rounded-xl text-left border bg-zinc-900/60 border-zinc-800 hover:border-amber-500 text-zinc-200 cursor-pointer transition-all hover:bg-amber-500/10"
+                    className="p-5 rounded-xl text-left border bg-zinc-900/60 border-zinc-800 hover:border-amber-500 text-zinc-200 cursor-pointer transition-all hover:bg-amber-500/10 disabled:opacity-50"
                   >
                     <span className="text-2xl mb-2 block">🥛</span>
                     <h5 className="font-semibold text-base text-zinc-100">
@@ -951,6 +956,12 @@ export function SommelierModal() {
                     </p>
                   </button>
                 </div>
+
+                {isQuizLoading && (
+                  <p className="text-center text-xs text-amber-300 animate-pulse">
+                    Calculando compatibilidad sensorial en el servidor...
+                  </p>
+                )}
 
                 <div className="text-center">
                   <button
@@ -966,7 +977,7 @@ export function SommelierModal() {
             {quizStep === 4 && quizResult && (
               <div className="max-w-xl mx-auto w-full space-y-5 text-center animate-in fade-in zoom-in-95 duration-500">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
-                  <Sparkles className="w-4 h-4" /> 98.4% Match Sensorial • Guardado en tu Memoria
+                  <Sparkles className="w-4 h-4" /> {quizMatchScore}% Match Sensorial • Guardado en tu Memoria
                 </div>
 
                 <div>

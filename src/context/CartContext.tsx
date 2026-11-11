@@ -1,14 +1,41 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { CoffeeProduct, CartItem } from '@/types/coffee';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+} from 'react';
+import { BrewingGuide, CartItem, CoffeeProduct } from '@/types/coffee';
+import { fetchBrewingGuides, fetchCoffees } from '@/lib/api';
 
 interface CartContextType {
+  products: CoffeeProduct[];
+  guides: BrewingGuide[];
+  isCatalogLoading: boolean;
+  catalogError: string | null;
+  reloadCatalog: () => Promise<void>;
+  sessionId: string;
   items: CartItem[];
-  addItem: (product: CoffeeProduct, grindOption?: CartItem['grindOption'], quantity?: number, openDrawer?: boolean) => void;
+  addItem: (
+    product: CoffeeProduct,
+    grindOption?: CartItem['grindOption'],
+    quantity?: number,
+    openDrawer?: boolean
+  ) => void;
   removeItem: (productId: string, grindOption: CartItem['grindOption']) => void;
-  updateQuantity: (productId: string, grindOption: CartItem['grindOption'], quantity: number) => void;
-  updateGrind: (productId: string, oldGrind: CartItem['grindOption'], newGrind: CartItem['grindOption']) => void;
+  updateQuantity: (
+    productId: string,
+    grindOption: CartItem['grindOption'],
+    quantity: number
+  ) => void;
+  updateGrind: (
+    productId: string,
+    oldGrind: CartItem['grindOption'],
+    newGrind: CartItem['grindOption']
+  ) => void;
   clearCart: () => void;
   totalItems: number;
   totalPrice: number;
@@ -26,14 +53,66 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
+  const [products, setProducts] = useState<CoffeeProduct[]>([]);
+  const [guides, setGuides] = useState<BrewingGuide[]>([]);
+  const [isCatalogLoading, setIsCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState('');
+
   const [items, setItems] = useState<CartItem[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSommelierOpen, setIsSommelierOpen] = useState(false);
   const [sommelierTab, setSommelierTab] = useState<'chat' | 'quiz'>('chat');
-  const [selectedCoffeeForSommelier, setSelectedCoffeeForSommelier] = useState<CoffeeProduct | null>(null);
+  const [selectedCoffeeForSommelier, setSelectedCoffeeForSommelier] =
+    useState<CoffeeProduct | null>(null);
 
-  // Cargar carrito de localStorage
+  const reloadCatalog = useCallback(async () => {
+    setIsCatalogLoading(true);
+    setCatalogError(null);
+    try {
+      const [loadedProducts, loadedGuides] = await Promise.all([
+        fetchCoffees(),
+        fetchBrewingGuides(),
+      ]);
+      setProducts(loadedProducts);
+      setGuides(loadedGuides);
+    } catch {
+      setCatalogError(
+        'No se pudo conectar con el backend Python (puerto 8000). Verifica que el servidor FastAPI esté activo.'
+      );
+    } finally {
+      setIsCatalogLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([fetchCoffees(), fetchBrewingGuides()])
+      .then(([loadedProducts, loadedGuides]) => {
+        if (cancelled) return;
+        setProducts(loadedProducts);
+        setGuides(loadedGuides);
+        setCatalogError(null);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setCatalogError(
+          'No se pudo conectar con el backend Python (puerto 8000). Verifica que el servidor FastAPI esté activo.'
+        );
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsCatalogLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Cargar carrito y sessionId de localStorage
   useEffect(() => {
     queueMicrotask(() => {
       try {
@@ -41,6 +120,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         if (saved) {
           setItems(JSON.parse(saved));
         }
+
+        let sid = localStorage.getItem('aura_session_id');
+        if (!sid) {
+          sid =
+            typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+              ? crypto.randomUUID()
+              : `sess-${Date.now()}`;
+          localStorage.setItem('aura_session_id', sid);
+        }
+        setSessionId(sid);
       } catch {
         // Ignorar errores de localStorage
       } finally {
@@ -49,7 +138,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  // Guardar en localStorage solo después de hidratar
+  // Guardar carrito en localStorage solo después de hidratar
   useEffect(() => {
     if (!isHydrated) return;
     try {
@@ -81,13 +170,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     };
   }, [isSommelierOpen, isCartOpen]);
 
-  const removeItem = useCallback((productId: string, grindOption: CartItem['grindOption']) => {
-    setItems((prev) =>
-      prev.filter(
-        (item) => !(item.product.id === productId && item.grindOption === grindOption)
-      )
-    );
-  }, []);
+  const removeItem = useCallback(
+    (productId: string, grindOption: CartItem['grindOption']) => {
+      setItems((prev) =>
+        prev.filter(
+          (item) => !(item.product.id === productId && item.grindOption === grindOption)
+        )
+      );
+    },
+    []
+  );
 
   const addItem = useCallback(
     (
@@ -118,11 +210,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   );
 
   const updateQuantity = useCallback(
-    (
-      productId: string,
-      grindOption: CartItem['grindOption'],
-      quantity: number
-    ) => {
+    (productId: string, grindOption: CartItem['grindOption'], quantity: number) => {
       if (quantity <= 0) {
         removeItem(productId, grindOption);
         return;
@@ -146,12 +234,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     ) => {
       if (oldGrind === newGrind) return;
       setItems((prev) => {
-        const target = prev.find((i) => i.product.id === productId && i.grindOption === oldGrind);
+        const target = prev.find(
+          (i) => i.product.id === productId && i.grindOption === oldGrind
+        );
         if (!target) return prev;
-        const existingNew = prev.find((i) => i.product.id === productId && i.grindOption === newGrind);
+        const existingNew = prev.find(
+          (i) => i.product.id === productId && i.grindOption === newGrind
+        );
         if (existingNew) {
           return prev
-            .filter((i) => !(i.product.id === productId && i.grindOption === oldGrind))
+            .filter(
+              (i) => !(i.product.id === productId && i.grindOption === oldGrind)
+            )
             .map((i) =>
               i.product.id === productId && i.grindOption === newGrind
                 ? { ...i, quantity: i.quantity + target.quantity }
@@ -174,13 +268,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setSelectedCoffeeForSommelier(null);
   }, []);
 
-  const openSommelierWithCoffee = useCallback((coffee?: CoffeeProduct, tab: 'chat' | 'quiz' = 'chat') => {
-    setSelectedCoffeeForSommelier(coffee || null);
-    setSommelierTab(coffee ? 'chat' : tab);
-    setIsSommelierOpen(true);
-  }, []);
+  const openSommelierWithCoffee = useCallback(
+    (coffee?: CoffeeProduct, tab: 'chat' | 'quiz' = 'chat') => {
+      setSelectedCoffeeForSommelier(coffee || null);
+      setSommelierTab(coffee ? 'chat' : tab);
+      setIsSommelierOpen(true);
+    },
+    []
+  );
 
-  const totalItems = useMemo(() => items.reduce((sum, item) => sum + item.quantity, 0), [items]);
+  const totalItems = useMemo(
+    () => items.reduce((sum, item) => sum + item.quantity, 0),
+    [items]
+  );
   const totalPrice = useMemo(
     () => items.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
     [items]
@@ -188,6 +288,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const contextValue = useMemo(
     () => ({
+      products,
+      guides,
+      isCatalogLoading,
+      catalogError,
+      reloadCatalog,
+      sessionId,
       items,
       addItem,
       removeItem,
@@ -207,6 +313,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       openSommelierWithCoffee,
     }),
     [
+      products,
+      guides,
+      isCatalogLoading,
+      catalogError,
+      reloadCatalog,
+      sessionId,
       items,
       addItem,
       removeItem,
@@ -225,9 +337,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <CartContext.Provider value={contextValue}>
-      {children}
-    </CartContext.Provider>
+    <CartContext.Provider value={contextValue}>{children}</CartContext.Provider>
   );
 }
 

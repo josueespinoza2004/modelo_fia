@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { useCart } from '@/context/CartContext';
-import { CartItem } from '@/types/coffee';
+import { submitOrder, validateCoupon } from '@/lib/api';
+import { CartItem, OrderConfirmationResponse } from '@/types/coffee';
 import {
   X,
   Trash2,
@@ -38,33 +39,72 @@ export function CartDrawer() {
     openSommelierWithCoffee,
   } = useCart();
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
+  const [orderConfirmation, setOrderConfirmation] = useState<OrderConfirmationResponse | null>(null);
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const [orderError, setOrderError] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [couponInput, setCouponInput] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
+  const [discountRate, setDiscountRate] = useState(0);
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
   const [couponError, setCouponError] = useState('');
 
   const freeShippingThreshold = 55.0;
-  const discountRate = appliedCoupon === 'AURA15' ? 0.15 : 0;
   const discountAmount = totalPrice * discountRate;
   const subtotalAfterDiscount = totalPrice - discountAmount;
   const remainingForFreeShipping = Math.max(0, freeShippingThreshold - subtotalAfterDiscount);
   const shippingProgress = Math.min(100, (subtotalAfterDiscount / freeShippingThreshold) * 100);
 
-  const handleApplyCoupon = () => {
-    const code = couponInput.trim().toUpperCase();
-    if (code === 'AURA15') {
-      setAppliedCoupon('AURA15');
-      setCouponError('');
-      setCouponInput('');
-    } else {
-      setCouponError('Cupón inválido (prueba con AURA15)');
+  const handleApplyCoupon = async () => {
+    const code = couponInput.trim();
+    if (!code) return;
+    setIsValidatingCoupon(true);
+    setCouponError('');
+    try {
+      const res = await validateCoupon(code, totalPrice);
+      if (res.valid && res.code) {
+        setAppliedCoupon(res.code);
+        setDiscountRate(res.discountRate);
+        setCouponInput('');
+      } else {
+        setCouponError(res.message || 'Cupón inválido');
+      }
+    } catch {
+      setCouponError('No se pudo validar el cupón con el servidor');
+    } finally {
+      setIsValidatingCoupon(false);
     }
   };
 
-  const handleCheckout = (e: React.FormEvent) => {
+  const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
-    setCheckoutSuccess(true);
-    clearCart();
+    if (items.length === 0 || isSubmittingOrder) return;
+    setIsSubmittingOrder(true);
+    setOrderError('');
+    try {
+      const res = await submitOrder({
+        email: customerEmail,
+        couponCode: appliedCoupon,
+        items: items.map((item) => ({
+          productId: item.product.id,
+          quantity: item.quantity,
+          grindOption: item.grindOption,
+        })),
+      });
+      if (res.success && res.orderNumber) {
+        setOrderConfirmation(res);
+        setCheckoutSuccess(true);
+        setAppliedCoupon(null);
+        setDiscountRate(0);
+        clearCart();
+      } else {
+        setOrderError(res.error || 'No se pudo procesar el pedido');
+      }
+    } catch {
+      setOrderError('Error de conexión con el servidor Python al procesar el pedido.');
+    } finally {
+      setIsSubmittingOrder(false);
+    }
   };
 
   if (!isCartOpen) return null;
@@ -266,11 +306,15 @@ export function CartDrawer() {
                   {appliedCoupon ? (
                     <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-300">
                       <span className="flex items-center gap-1.5 font-medium">
-                        <Tag className="w-3.5 h-3.5" /> Cupón <strong>{appliedCoupon}</strong> (-15%)
+                        <Tag className="w-3.5 h-3.5" /> Cupón <strong>{appliedCoupon}</strong> (-
+                        {Math.round(discountRate * 100)}%)
                       </span>
                       <button
                         type="button"
-                        onClick={() => setAppliedCoupon(null)}
+                        onClick={() => {
+                          setAppliedCoupon(null);
+                          setDiscountRate(0);
+                        }}
                         className="text-zinc-400 hover:text-white text-[11px] cursor-pointer"
                       >
                         Quitar
@@ -291,10 +335,11 @@ export function CartDrawer() {
                         />
                         <button
                           type="button"
+                          disabled={isValidatingCoupon}
                           onClick={handleApplyCoupon}
-                          className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-amber-300 text-xs font-medium cursor-pointer transition-colors"
+                          className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-amber-300 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
                         >
-                          Aplicar
+                          {isValidatingCoupon ? '...' : 'Aplicar'}
                         </button>
                       </div>
                       {couponError && (
@@ -311,7 +356,7 @@ export function CartDrawer() {
                   </div>
                   {discountAmount > 0 && (
                     <div className="flex justify-between text-emerald-400">
-                      <span>Descuento Club AURA (15%)</span>
+                      <span>Descuento Club AURA ({Math.round(discountRate * 100)}%)</span>
                       <span className="font-medium">-${discountAmount.toFixed(2)} USD</span>
                     </div>
                   )}
@@ -347,12 +392,19 @@ export function CartDrawer() {
                     className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 text-sm text-zinc-100 focus:outline-none focus:border-amber-500 placeholder:text-zinc-500"
                   />
 
+                  {orderError && (
+                    <p className="text-[11px] text-red-400">{orderError}</p>
+                  )}
+
                   <Button
                     type="submit"
+                    disabled={isSubmittingOrder}
                     id="checkout-confirm-btn"
-                    className="w-full bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 hover:brightness-110 text-zinc-950 font-bold py-3 rounded-xl shadow-lg shadow-amber-600/25 flex items-center justify-center gap-2 cursor-pointer transition-all"
+                    className="w-full bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 hover:brightness-110 text-zinc-950 font-bold py-3 rounded-xl shadow-lg shadow-amber-600/25 flex items-center justify-center gap-2 cursor-pointer transition-all disabled:opacity-50"
                   >
-                    <span>Finalizar Pedido de Café</span>
+                    <span>
+                      {isSubmittingOrder ? 'Procesando en el servidor...' : 'Finalizar Pedido de Café'}
+                    </span>
                     <ArrowRight className="w-4 h-4" />
                   </Button>
                 </form>
@@ -386,15 +438,25 @@ export function CartDrawer() {
           <div className="p-4 rounded-xl bg-zinc-900/80 border border-zinc-800 text-xs text-zinc-300 space-y-1.5 my-2">
             <div className="flex justify-between">
               <span className="text-zinc-500">Número de lote:</span>
-              <span className="font-mono text-amber-400">#AURA-2026-X89</span>
+              <span className="font-mono text-amber-400">
+                {orderConfirmation?.orderNumber || '#AURA-2026'}
+              </span>
             </div>
+            {orderConfirmation?.total !== undefined && (
+              <div className="flex justify-between">
+                <span className="text-zinc-500">Total confirmado:</span>
+                <span className="font-semibold text-amber-300">
+                  ${orderConfirmation.total.toFixed(2)} USD
+                </span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-zinc-500">Fecha de tueste:</span>
-              <span>Esta semana (Frescura pico)</span>
+              <span>{orderConfirmation?.roastDate || 'Esta semana (Frescura pico)'}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-zinc-500">Despacho garantizado:</span>
-              <span>48 horas</span>
+              <span>{orderConfirmation?.estimatedDispatch || '48 horas'}</span>
             </div>
           </div>
 

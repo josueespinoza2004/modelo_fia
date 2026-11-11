@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useCart } from '@/context/CartContext';
-import { COFFEE_PRODUCTS } from '@/data/coffeeCatalog';
+import { fetchCoffees } from '@/lib/api';
 import { CoffeeProduct, FlavorCategory, CartItem, BrewMethod } from '@/types/coffee';
 import {
   Sparkles,
@@ -59,15 +59,29 @@ function SensoryBar({ label, value }: { label: string; value: number }) {
 }
 
 export function ProductCatalog({ initialFilter = 'todos', onFilterChange }: ProductCatalogProps) {
-  const { addItem, openSommelierWithCoffee } = useCart();
+  const {
+    products: catalogProducts,
+    isCatalogLoading,
+    catalogError,
+    reloadCatalog,
+    addItem,
+    openSommelierWithCoffee,
+  } = useCart();
   const [internalFilter, setInternalFilter] = useState<FlavorCategory | 'todos'>(initialFilter);
   const [selectedMethod, setSelectedMethod] = useState<BrewMethod | 'todos'>('todos');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('featured');
+  const [remoteProducts, setRemoteProducts] = useState<CoffeeProduct[] | null>(null);
+  const [isFiltering, setIsFiltering] = useState(false);
   const [selectedGrinds, setSelectedGrinds] = useState<Record<string, CartItem['grindOption']>>({});
   const [detailCoffee, setDetailCoffee] = useState<CoffeeProduct | null>(null);
 
   const selectedFilter = onFilterChange ? initialFilter : internalFilter;
+  const isDefaultQuery =
+    selectedFilter === 'todos' &&
+    selectedMethod === 'todos' &&
+    !searchQuery.trim() &&
+    sortBy === 'featured';
 
   const handleCategoryChange = (cat: FlavorCategory | 'todos') => {
     setInternalFilter(cat);
@@ -76,31 +90,43 @@ export function ProductCatalog({ initialFilter = 'todos', onFilterChange }: Prod
     }
   };
 
-  const filteredProducts = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
+  useEffect(() => {
+    if (isDefaultQuery) return;
 
-    return COFFEE_PRODUCTS.filter((p) => {
-      const matchesCategory = selectedFilter === 'todos' || p.flavorCategory === selectedFilter;
-      const matchesMethod =
-        selectedMethod === 'todos' || p.recommendedBrews.includes(selectedMethod);
-      const matchesSearch =
-        !q ||
-        p.name.toLowerCase().includes(q) ||
-        p.country.toLowerCase().includes(q) ||
-        p.origin.toLowerCase().includes(q) ||
-        p.variety.toLowerCase().includes(q) ||
-        p.tastingNotes.some((n) => n.toLowerCase().includes(q));
+    let cancelled = false;
+    const timer = setTimeout(
+      async () => {
+        setIsFiltering(true);
+        try {
+          const result = await fetchCoffees({
+            category: selectedFilter,
+            method: selectedMethod,
+            search: searchQuery,
+            sort: sortBy,
+          });
+          if (!cancelled) {
+            setRemoteProducts(result);
+          }
+        } catch {
+          // Mantener última lista si falla una petición de búsqueda
+        } finally {
+          if (!cancelled) {
+            setIsFiltering(false);
+          }
+        }
+      },
+      searchQuery ? 200 : 0
+    );
 
-      return matchesCategory && matchesMethod && matchesSearch;
-    }).sort((a, b) => {
-      if (sortBy === 'sca-desc') return b.scaScore - a.scaScore;
-      if (sortBy === 'price-asc') return a.price - b.price;
-      if (sortBy === 'price-desc') return b.price - a.price;
-      if (a.featured && !b.featured) return -1;
-      if (!a.featured && b.featured) return 1;
-      return b.scaScore - a.scaScore;
-    });
-  }, [selectedFilter, selectedMethod, searchQuery, sortBy]);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [isDefaultQuery, selectedFilter, selectedMethod, searchQuery, sortBy]);
+
+  const filteredProducts = isDefaultQuery
+    ? catalogProducts
+    : remoteProducts ?? catalogProducts;
 
   const handleGrindChange = (productId: string, grind: CartItem['grindOption']) => {
     setSelectedGrinds((prev) => ({ ...prev, [productId]: grind }));
@@ -206,8 +232,28 @@ export function ProductCatalog({ initialFilter = 'todos', onFilterChange }: Prod
           </div>
         </div>
 
-        {/* Empty State */}
-        {filteredProducts.length === 0 ? (
+        {/* Backend Error / Loading / Empty State */}
+        {catalogError && filteredProducts.length === 0 ? (
+          <div className="p-10 rounded-2xl bg-red-950/20 border border-red-500/30 text-center space-y-3">
+            <p className="font-serif text-lg text-red-200">{catalogError}</p>
+            <Button
+              onClick={reloadCatalog}
+              variant="outline"
+              className="border-amber-500/40 text-amber-300 hover:bg-amber-500/10 text-xs cursor-pointer"
+            >
+              Reintentar Conexión
+            </Button>
+          </div>
+        ) : (isCatalogLoading || isFiltering) && filteredProducts.length === 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[1, 2, 3].map((n) => (
+              <div
+                key={n}
+                className="h-[480px] rounded-2xl bg-zinc-900/50 border border-zinc-800 animate-pulse"
+              />
+            ))}
+          </div>
+        ) : filteredProducts.length === 0 ? (
           <div className="p-12 rounded-2xl bg-zinc-950/70 border border-zinc-800 text-center space-y-4">
             <p className="font-serif text-xl text-amber-100">
               No encontramos microlotes que coincidan con esos filtros exactos.

@@ -34,18 +34,36 @@ export interface CoffeeProduct {
   image: string;
 }
 
+export interface BrewingGuide {
+  id: BrewMethod;
+  name: string;
+  tagline: string;
+  ratio: string;
+  ratioMultiplier: number;
+  grind: string;
+  waterTemp: string;
+  brewTime: string;
+  recommendedCoffees: string[];
+  tips: string;
+}
+
 export interface CartItem {
   product: CoffeeProduct;
   quantity: number;
-  grindOption: 'Grano Entero' | 'Molienda Fina (Espresso)' | 'Molienda Media (V60 / Filtro)' | 'Molienda Gruesa (Prensa Francesa)';
+  grindOption:
+    | 'Grano Entero'
+    | 'Molienda Fina (Espresso)'
+    | 'Molienda Media (V60 / Filtro)'
+    | 'Molienda Gruesa (Prensa Francesa)';
 }
 
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
-  timestamp: string;
+  timestamp?: string;
   recommendedProductIds?: string[];
+  recommendedProducts?: CoffeeProduct[];
   suggestedQuestions?: string[];
 }
 
@@ -64,3 +82,63 @@ export interface UserPalateMemory {
   lastUpdated?: string;
 }
 
+export interface SommelierChatResponse {
+  success: boolean;
+  reply?: string;
+  recommendedProductIds?: string[];
+  recommendedProducts?: CoffeeProduct[];
+  updatedMemory?: UserPalateMemory;
+  engine?: 'groq' | 'local-fallback';
+  error?: string;
+}
+
+export interface QuizEvaluationResponse {
+  success: boolean;
+  matchScore: number;
+  winner: CoffeeProduct;
+  runnerUp?: CoffeeProduct | null;
+  recommendedGrind: CartItem['grindOption'];
+  updatedMemory: UserPalateMemory;
+}
+
+export interface RatioCalculationResponse {
+  success: boolean;
+  method: BrewMethod;
+  coffeeGrams: number;
+  waterMl: number;
+  bloomMl: number;
+  ratioMultiplier: number;
+  waterTemp: string;
+  brewTime: string;
+  grind: string;
+}
+
+export interface CouponValidationResponse {
+  success: boolean;
+  valid: boolean;
+  code?: string | null;
+  discountRate: number;
+  discountAmount: number;
+  message: string;
+}
+
+export interface OrderConfirmationResponse {
+  success: boolean;
+  orderNumber?: string;
+  email?: string;
+  subtotal?: number;
+  discountAmount?: number;
+  shippingCost?: number;
+  total?: number;
+  freeShippingApplied?: boolean;
+  roastDate?: string;
+  estimatedDispatch?: string;
+  error?: string;
+}
+
+export interface NewsletterResponse {
+  success: boolean;
+  message?: string;
+  couponCode?: string;
+  error?: string;
+}

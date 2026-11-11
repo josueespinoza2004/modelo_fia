@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { useCart } from '@/context/CartContext';
-import { COFFEE_PRODUCTS } from '@/data/coffeeCatalog';
 import { FlavorCategory } from '@/types/coffee';
 import { Sparkles, Compass, ArrowRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -62,7 +61,7 @@ export function FlavorRadarSection({
   selectedFilter,
   onSelectFilter,
 }: FlavorRadarSectionProps) {
-  const { openSommelierWithCoffee } = useCart();
+  const { products, openSommelierWithCoffee } = useCart();
   const [internalCategory, setInternalCategory] = useState<FlavorCategory | 'todos'>('todos');
 
   const activeCategory = selectedFilter !== undefined ? selectedFilter : internalCategory;
@@ -77,8 +76,8 @@ export function FlavorRadarSection({
   const activeInfo = CATEGORIES.find((c) => c.id === activeCategory) || CATEGORIES[0];
   const matchingCoffees =
     activeCategory === 'todos'
-      ? COFFEE_PRODUCTS
-      : COFFEE_PRODUCTS.filter((c) => c.flavorCategory === activeCategory);
+      ? products
+      : products.filter((c) => c.flavorCategory === activeCategory);
 
   return (
     <section id="perfil-sensorial" className="py-16 bg-[#0f0c0a] border-y border-amber-600/20">

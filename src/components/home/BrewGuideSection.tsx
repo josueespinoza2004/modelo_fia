@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useCart } from '@/context/CartContext';
-import { BREWING_GUIDES, COFFEE_PRODUCTS } from '@/data/coffeeCatalog';
+import { calculateBrewRatio } from '@/lib/api';
 import { BrewMethod, CartItem } from '@/types/coffee';
 import {
   Droplet,
@@ -33,9 +33,10 @@ function getGrindForGuide(method: BrewMethod): CartItem['grindOption'] {
 }
 
 export function BrewGuideSection() {
-  const { openSommelierWithCoffee, addItem } = useCart();
+  const { guides, products, openSommelierWithCoffee, addItem } = useCart();
   const [selectedMethod, setSelectedMethod] = useState<BrewMethod>('V60');
   const [coffeeGrams, setCoffeeGrams] = useState<number>(18);
+  const [waterResult, setWaterResult] = useState<{ waterMl: number; bloomMl: number } | null>(null);
 
   // Cronómetro de extracción en vivo
   const [timerSeconds, setTimerSeconds] = useState(0);
@@ -55,21 +56,44 @@ export function BrewGuideSection() {
     return `${String(mins).padStart(2, '0')}:${String(rem).padStart(2, '0')}`;
   };
 
-  const guide = BREWING_GUIDES.find((g) => g.id === selectedMethod) || BREWING_GUIDES[0];
+  const guide = guides.find((g) => g.id === selectedMethod) || guides[0];
 
-  // Cálculo de ratio dinámico
-  const ratioMultiplier =
-    selectedMethod === 'Espresso'
-      ? 2
-      : selectedMethod === 'Aeropress'
-      ? 14
-      : selectedMethod === 'Chemex' || selectedMethod === 'Prensa Francesa'
-      ? 15
-      : 16;
-  const calculatedWater = Math.round(coffeeGrams * ratioMultiplier);
+  // Consultar cálculo de ratio en el backend Python
+  useEffect(() => {
+    if (!guide) return;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const res = await calculateBrewRatio(selectedMethod, coffeeGrams);
+        if (!cancelled && res.success) {
+          setWaterResult({ waterMl: res.waterMl, bloomMl: res.bloomMl });
+        }
+      } catch {
+        // Fallback visual únicamente mientras responde la red
+      }
+    }, 120);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [selectedMethod, coffeeGrams, guide]);
+
+  if (!guide) {
+    return (
+      <section id="guia-extraccion" className="py-20 bg-[#100c0a] border-t border-amber-600/20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="h-80 rounded-2xl bg-zinc-900/50 border border-zinc-800 animate-pulse" />
+        </div>
+      </section>
+    );
+  }
+
+  const calculatedWater = waterResult?.waterMl ?? Math.round(coffeeGrams * guide.ratioMultiplier);
+  const calculatedBloom = waterResult?.bloomMl ?? Math.round(coffeeGrams * 2.5);
 
   const recommendedProducts = guide.recommendedCoffees
-    .map((id) => COFFEE_PRODUCTS.find((p) => p.id === id))
+    .map((id) => products.find((p) => p.id === id))
     .filter((p): p is NonNullable<typeof p> => Boolean(p));
 
   return (
@@ -90,7 +114,7 @@ export function BrewGuideSection() {
 
         {/* Method Selector Tabs */}
         <div className="flex flex-wrap items-center justify-center gap-2 mb-10">
-          {BREWING_GUIDES.map((g) => (
+          {guides.map((g) => (
             <button
               key={g.id}
               onClick={() => {
@@ -253,7 +277,7 @@ export function BrewGuideSection() {
                 </span>
                 {selectedMethod !== 'Espresso' && (
                   <span className="text-[10px] text-emerald-400 block">
-                    ✓ Pre-infusión (Bloom) sugerida: primeros {Math.round(coffeeGrams * 2.5)} ml por 40s
+                    ✓ Pre-infusión (Bloom) sugerida: primeros {calculatedBloom} ml por 40s
                   </span>
                 )}
               </div>

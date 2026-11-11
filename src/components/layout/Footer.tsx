@@ -2,18 +2,32 @@
 
 import React, { useState } from 'react';
 import { Coffee, ShieldCheck, HeartHandshake, Leaf, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { subscribeNewsletter } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 export function Footer() {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
+  const [couponCode, setCouponCode] = useState('AURA15');
+  const [subError, setSubError] = useState('');
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
-    setSubscribed(true);
-    setEmail('');
+    setSubError('');
+    try {
+      const res = await subscribeNewsletter(email);
+      if (res.success) {
+        if (res.couponCode) setCouponCode(res.couponCode);
+        setSubscribed(true);
+        setEmail('');
+      } else {
+        setSubError(res.error || 'No se pudo completar la suscripción');
+      }
+    } catch {
+      setSubError('Error conectando con el servidor');
+    }
   };
 
   return (
@@ -123,28 +137,31 @@ export function Footer() {
                     ¡Bienvenido al Club de Catadores!
                   </span>
                   <span>
-                    Usa el código <strong className="font-mono text-amber-300">AURA15</strong> en tu cesta para un 15% de descuento.
+                    Usa el código <strong className="font-mono text-amber-300">{couponCode}</strong> en tu cesta para un 15% de descuento.
                   </span>
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleSubscribe} className="flex gap-2">
-                <Input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="tu@email.com"
-                  className="bg-zinc-900 border-zinc-700 text-zinc-100 text-sm focus:border-amber-500 rounded-lg"
-                />
-                <Button
-                  type="submit"
-                  aria-label="Suscribirse al Club de Catadores"
-                  className="bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold px-4 rounded-lg cursor-pointer"
-                >
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              </form>
+              <div className="space-y-1.5">
+                <form onSubmit={handleSubscribe} className="flex gap-2">
+                  <Input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="tu@email.com"
+                    className="bg-zinc-900 border-zinc-700 text-zinc-100 text-sm focus:border-amber-500 rounded-lg"
+                  />
+                  <Button
+                    type="submit"
+                    aria-label="Suscribirse al Club de Catadores"
+                    className="bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold px-4 rounded-lg cursor-pointer"
+                  >
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
+                </form>
+                {subError && <p className="text-xs text-red-400">{subError}</p>}
+              </div>
             )}
           </div>
         </div>
