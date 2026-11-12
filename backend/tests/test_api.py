@@ -226,3 +226,16 @@ def test_sommelier_streaming_endpoint(monkeypatch: pytest.MonkeyPatch):
         delta_joined = "".join(e["content"] for e in events if e["type"] == "delta")
         assert delta_joined == done_evt["reply"]
 
+
+def test_sommelier_casual_greeting_is_brief_without_cards(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setattr(settings, "GROQ_API_KEY", "")
+
+    with TestClient(app) as client:
+        res = client.post("/api/sommelier", json={"message": "Hola!"})
+        assert res.status_code == 200
+        data = res.json()
+        assert data["recommendedProductIds"] == []
+        assert len(data["reply"]) < 160
+

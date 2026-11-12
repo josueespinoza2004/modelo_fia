@@ -200,46 +200,91 @@ def _format_memory_for_prompt(memory: UserPalateMemory) -> str:
 
 def build_system_prompt(memory: UserPalateMemory) -> str:
     return f"""
-Eres "Don Aurelio", Maestro Sommelier de Café, Licenciado Q-Grader y Director de Tueste de la tostaduría boutique "AURA Coffee Roasters".
-Tu pasión es educar el paladar de las personas y conectarlas con el café de especialidad perfecto para su momento, gusto sensorial y método de extracción.
+Eres "Don Aurelio", sommelier y barista anfitrión de "AURA Coffee Roasters". Conversas en un chat en vivo como si atendieras en una barra acogedora: cercano, cálido, natural y con pasión por el buen café.
 
 {_format_memory_for_prompt(memory)}
 
-REGLAS DE INTERACCIÓN:
-1. Hablas en español con un tono cálido, distinguido, sensorial y apasionado (como un barista sabio y cercano en una barra de especialidad).
-2. Tienes acceso al catálogo exclusivo de AURA Coffee Roasters. Usa SOLO estos cafés al recomendar granos:
+CATÁLOGO EXCLUSIVO AURA (usa SOLO estos granos si recomiendas):
 {CATALOG_CONTEXT}
 
-3. Sé conciso, directo y adaptativo:
-   - Si en la MEMORIA ADAPTATIVA DEL CLIENTE ya consta su método de extracción, gusto o sensibilidad a la acidez, haz referencia explícita a ello para demostrar que lo recuerdas y adapta tu receta a esa cafetera.
-   - Responde en 2 a 4 párrafos cortos o listas con viñetas.
-   - Explica el porqué sensorial de tu recomendación (ej: notas de jazmín vs caramelo, acidez cítrica vs cuerpo sedoso).
-   - Da un consejo de barista práctico (temperatura del agua, ratio café:agua o molienda).
+REGLAS DE CONVERSACIÓN (MUY IMPORTANTES):
+1. **Sé breve y natural (estilo chat, NO ensayo):**
+   - Si el usuario solo saluda o agradece ("hola", "buenas", "gracias"), responde en **1 o 2 líneas** cálidas y haz una pregunta amable para conocer su gusto o cafetera. NO sueltes recomendaciones ni fichas si aún no preguntó.
+   - Para preguntas o recomendaciones normales, escribe máximo **2 a 4 líneas en total (35 a 75 palabras)**.
+   - **NO repitas precios, puntajes SCA, fincas ni listas largas en tu texto** salvo que te los pidan: las tarjetas interactivas debajo ya muestran esos datos.
+   - Conecta con lo que te cuenta el usuario (si tiene gastritis, prisa, toma con leche, o usa cierta cafetera) y usa lo que ya recuerdas en la MEMORIA ADAPTATIVA sin sonar robótico.
+   - Cierra casi siempre con **1 pregunta corta y genuina** para continuar la conversación (ej. *"¿Sueles tomarlo negro o con leche?"*, *"¿Quieres que te pase la receta exacta para tu V60?"*).
 
-4. ETIQUETA OBLIGATORIA DE RECOMENDACIÓN:
-   - Cuando recomiendes uno o más cafés del catálogo, SIEMPRE añade al final de tu mensaje la etiqueta exacta:
+2. **Cuándo extenderte un poco más:**
+   - ÚNICAMENTE si el usuario pide explícitamente una *"receta paso a paso"*, *"explícame a fondo"* o *"cómo lo preparo"*; aun así, sé concreto (máximo 4 viñetas cortas con dosis, agua, temperatura y tiempo).
+
+3. **ETIQUETA DE RECOMENDACIÓN:**
+   - Solo cuando recomiendes uno o más granos concretos en ese mensaje, agrega al final:
      [RECOMMENDED: id_del_cafe_1, id_del_cafe_2]
-   - Ejemplo: [RECOMMENDED: geisha-la-esmeralda]
-   - Usa exclusivamente los IDs exactos de la lista:
-     * geisha-la-esmeralda
-     * bourbon-rosado-huila
-     * yirgacheffe-heirloom
-     * pacamara-black-honey-dipilto
-     * kenya-aa-nyeri
-     * sugarcane-decaf-caldas
-   - Si la consulta es una duda general sobre métodos o molienda y no amerita recomendar un grano específico, no agregues la etiqueta.
-
-5. Sé honesto: si preguntan por cafés comerciales oscuros o amargos quemados, explícales con amabilidad la diferencia con el café de especialidad de tueste medio/ligero respetuoso del terruño.
+   - IDs válidos: geisha-la-esmeralda, bourbon-rosado-huila, yirgacheffe-heirloom, pacamara-black-honey-dipilto, kenya-aa-nyeri, sugarcane-decaf-caldas.
+   - Si solo estás saludando o haciendo una pregunta de aclaración, NO agregues la etiqueta.
 """
 
 
 def build_local_sommelier_response(
     query: str, memory: UserPalateMemory
 ) -> tuple[str, list[str]]:
-    """Motor adaptativo local de respaldo cuando Groq no está disponible."""
-    q = query.lower()
+    """Motor adaptativo local de respaldo: breve, cercano y conversacional."""
+    q = query.lower().strip()
+    words = q.split()
+
+    # 0. Saludos o agradecimientos puros sin consulta de producto
+    has_coffee_intent = any(
+        kw in q
+        for kw in (
+            "café",
+            "cafe",
+            "grano",
+            "recom",
+            "v60",
+            "chemex",
+            "aeropress",
+            "espresso",
+            "moka",
+            "prensa",
+            "frutal",
+            "floral",
+            "chocolate",
+            "acidez",
+            "ácido",
+            "acido",
+            "leche",
+            "gastritis",
+            "reflujo",
+            "decaf",
+            "descafeinado",
+            "geisha",
+            "bourbon",
+            "yirgacheffe",
+            "pacamara",
+            "kenya",
+            "roble",
+            "receta",
+        )
+    )
+    if not has_coffee_intent and len(words) <= 6:
+        if any(kw in q for kw in ("gracias", "perfecto", "genial", "listo", "excelente")):
+            return (
+                "¡Con mucho gusto! Aquí sigo en la barra por si quieres ajustar la molienda o probar otro origen. ☕",
+                [],
+            )
+        method_hint = (
+            f" Como ya sé que usas **{memory.preferredMethod}**, dime qué perfil se te antoja hoy."
+            if memory.preferredMethod
+            else " ¿Qué cafetera usas en casa o qué sabores disfrutas más?"
+        )
+        return (
+            f"¡Qué gusto saludarte! Bienvenido a la barra de AURA.{method_hint}",
+            [],
+        )
+
     method_note = (
-        f"Recordando que preparas en **{memory.preferredMethod}**, "
+        f"Pensando en tu **{memory.preferredMethod}**, "
         if memory.preferredMethod
         else ""
     )
@@ -250,14 +295,9 @@ def build_local_sommelier_response(
         coffee = COFFEE_BY_ID[mentioned[0]]
         target_method = memory.preferredMethod or coffee.recommendedBrews[0]
         reply = (
-            f"¡Excelente elección fijarte en nuestro **{coffee.name}** ({coffee.origin}, {coffee.country})! "
-            f"Es un lote cultivado a {coffee.altitude} en **{coffee.farm}** por {coffee.producer}, "
-            f"con una puntuación de **{coffee.scaScore} puntos SCA**.\n\n"
-            f"En taza despliega notas vibrantes de **{', '.join(coffee.tastingNotes)}**, "
-            f"gracias a su proceso *{coffee.process}* y su tueste {coffee.roastLevel.lower()} "
-            f"(Acidez {coffee.acidity}/5, Cuerpo {coffee.body}/5, Dulzura {coffee.sweetness}/5).\n\n"
-            f"- **Consejo personalizado:** {method_note}te sugiero extraerlo en **{target_method}** "
-            f"con agua a 92°C y pre-infusión de 40 segundos para despertar todos sus compuestos aromáticos."
+            f"El **{coffee.name}** es una joya de {coffee.country}: en taza destaca por sus notas a "
+            f"**{', '.join(coffee.tastingNotes[:3])}**.\n\n"
+            f"{method_note}brilla muchísimo en **{target_method}**. ¿Quieres que te pase las medidas exactas de agua y temperatura para prepararlo?"
         )
         return reply, [coffee.id]
 
@@ -273,6 +313,8 @@ def build_local_sommelier_response(
                 "no sea ácido",
                 "no sea acido",
                 "baja acidez",
+                "sin mucha acidez",
+                "menos acidez",
                 "noche",
                 "descafeinado",
             )
@@ -281,14 +323,10 @@ def build_local_sommelier_response(
         or memory.flavorPreference == "decaf"
     ):
         reply = (
-            f"{method_note}teniendo en cuenta tu preferencia por un perfil de **baja acidez y amable con el estómago**, "
-            "te recomiendo estos dos microlotes de dulzura sedosa:\n\n"
-            "- **Decaf Sugarcane El Roble (Acidez 2/5):** Descafeinado natural con caña de azúcar de Caldas, Colombia. "
-            "Cero irritación y notas cremosas a **toffee, vainilla tostada y almendra**.\n"
-            "- **Pacamara Black Honey Reserva (Acidez 3/5):** Proceso 100% mucílago preservado con un cuerpo licoroso (5/5) "
-            "y dulzura densa de **panela, canela y chocolate belga**.\n\n"
-            f"- **Consejo de barista:** Usa agua a **90°C** en tu {memory.preferredMethod or 'cafetera'} "
-            "para lograr una infusión redonda, dulce y libre de acidez punzante."
+            f"{method_note}para cuidar tu estómago sin renunciar al sabor te sugiero dos opciones muy suaves:\n\n"
+            "- **Decaf Sugarcane El Roble:** Dulce (toffee y vainilla), casi sin acidez y descafeinado naturalmente con caña.\n"
+            "- **Pacamara Black Honey:** Cuerpo sedoso y notas a chocolate con acidez muy amable.\n\n"
+            "¿Prefieres evitar la cafeína por completo o solo bajar la acidez?"
         )
         return reply, ["sugarcane-decaf-caldas", "pacamara-black-honey-dipilto"]
 
@@ -310,22 +348,14 @@ def build_local_sommelier_response(
         or memory.flavorPreference == "chocolate"
     ):
         milk_phrase = (
-            " que brillen con leche"
+            " con leche queda espectacular"
             if memory.milkPreference == "con-leche"
-            else " con gran cuerpo"
-        )
-        grind_advice = (
-            "fina (ratio 1:2 en 28s)"
-            if memory.preferredMethod == "Espresso"
-            else "media-gruesa (ratio 1:15 a 93°C)"
+            else " tiene un cuerpo redondo delicioso"
         )
         reply = (
-            f"{method_note}para disfrutar de notas achocolatadas{milk_phrase}, necesitas granos de densidad licorosa:\n\n"
-            "- **Pacamara Black Honey Reserva (Nicaragua - SCA 88):** Proceso *Black Honey* con cuerpo 5/5 y notas intensas "
-            "de **chocolate belga, panela y manzana caramelizada**.\n"
-            "- **Decaf Sugarcane El Roble (Colombia - SCA 86.5):** Perfil sedoso con notas de **toffee, vainilla tostada y almendra horneada**.\n\n"
-            f"- **Consejo de barista:** En {memory.preferredMethod or 'Prensa Francesa o Espresso'} usa molienda {grind_advice} "
-            "para resaltar su textura achocolatada."
+            f"{method_note}si buscas notas dulces y achocolatadas, el **Pacamara Black Honey**{milk_phrase} "
+            "(sabe a chocolate belga, panela y canela), y el **Decaf El Roble** va genial si buscas algo más cremoso.\n\n"
+            "¿Lo sueles tomar puro o acompañado con leche?"
         )
         return reply, ["pacamara-black-honey-dipilto", "sugarcane-decaf-caldas"]
 
@@ -335,25 +365,17 @@ def build_local_sommelier_response(
         or memory.flavorPreference == "frutal"
     ):
         reply = (
-            f"{method_note}para tu gusto por perfiles **frutales y exóticos**, estos dos microlotes son verdaderas joyas sensoriales:\n\n"
-            "- **Bourbon Rosado Anaeróbico (Huila, Colombia - SCA 89):** Doble fermentación anaeróbica con notas de "
-            "**frambuesa madura, cacao ruby y caramelo salado**.\n"
-            "- **Yirgacheffe Grado 1 Heirloom (Etiopía - SCA 90):** Proceso natural secado en cereza completa, pura mermelada de "
-            "**arándano silvestre, mandarina dulce y flor de sauco**.\n\n"
-            f"- **Consejo de barista:** En tu {memory.preferredMethod or 'V60 o AeroPress'} extrae a **91°C** con ratio 1:15 "
-            "para destacar toda su jugosidad frutal."
+            f"{method_note}para una explosión frutal te encantarán el **Bourbon Rosado** (notas a frambuesa y cacao) "
+            "y el **Yirgacheffe Heirloom** (arándanos silvestres y mandarina).\n\n"
+            "¿Te llaman más los frutos rojos intensos o ese toque dulce a arándano?"
         )
         return reply, ["bourbon-rosado-huila", "yirgacheffe-heirloom"]
 
     # 5. Floral / cítrico / general
     reply = (
-        f"{method_note}para experimentar la máxima complejidad floral y cítrica de nuestra tostaduría, "
-        "te sugiero estos dos microlotes extraordinarios:\n\n"
-        "- **Geisha Finca La Esmeralda (Panamá - SCA 91.5):** El \"champagne\" de los cafés. Fragancia de "
-        f"**jazmín silvestre, bergamota y melocotón blanco**, sublime en {memory.preferredMethod or 'V60 o Chemex'}.\n"
-        "- **Kenya AA Nyeri High Reserve (Kenia - SCA 89.0):** Lavado doble con agua de glaciar, notas vibrantes de "
-        "**grosella negra (cassis), pomelo rubí y caña de azúcar**.\n\n"
-        "- **Consejo de barista:** Usa un ratio **1:16** (15g de café por 240ml de agua a 92°C) con pre-infusión de 45 segundos."
+        f"{method_note}si buscas aromas limpios y elegantes, prueba el **Geisha La Esmeralda** (jazmín y melocotón) "
+        "o el **Kenya AA Nyeri** (grosella negra y cítricos vibrantes).\n\n"
+        "¿Qué método usas en casa para ajustar la molienda?"
     )
     return reply, ["geisha-la-esmeralda", "kenya-aa-nyeri"]
 
@@ -507,8 +529,9 @@ async def ask_sommelier(
             completion = await client.chat.completions.create(
                 model=settings.GROQ_MODEL,
                 messages=groq_messages,  # type: ignore[arg-type]
-                temperature=0.3,
-                max_tokens=1600,
+                temperature=0.4,
+                max_tokens=900,
+                reasoning_effort="low",
             )
             raw_content = completion.choices[0].message.content or ""
             clean_reply, recommended_ids = _parse_recommendations(raw_content)
@@ -578,8 +601,9 @@ async def stream_sommelier(
             stream = await client.chat.completions.create(
                 model=settings.GROQ_MODEL,
                 messages=groq_messages,  # type: ignore[arg-type]
-                temperature=0.3,
-                max_tokens=1600,
+                temperature=0.4,
+                max_tokens=900,
+                reasoning_effort="low",
                 stream=True,
             )
 

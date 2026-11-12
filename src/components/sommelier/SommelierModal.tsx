@@ -43,8 +43,7 @@ const INITIAL_WELCOME_MESSAGE: Message = {
   id: 'welcome',
   role: 'assistant',
   content:
-    '¡Un placer darte la bienvenida a nuestra tostaduría! Soy **Don Aurelio**, Maestro Sommelier y Q-Grader de AURA.\n\nCuéntame: ¿qué **método de extracción** usas en casa o qué **perfiles de sabor** (frutal, floral, achocolatado o baja acidez) estás buscando experimentar hoy? Iré recordando tus gustos para personalizar cada recomendación.',
-  recommendedProductIds: ['geisha-la-esmeralda', 'pacamara-black-honey-dipilto'],
+    '¡Hola! Soy **Don Aurelio**, tu sommelier en AURA ☕\n\n¿Qué cafetera usas en casa o qué sabores se te antojan hoy? Así vamos afinando tu taza ideal.',
 };
 
 function getDefaultGrindForMethod(method?: BrewMethod): CartItem['grindOption'] {
@@ -99,6 +98,16 @@ function FormattedMessage({ content }: { content: string }) {
             <div key={i} className="flex items-start gap-2 pl-1">
               <span className="text-amber-400 font-bold mt-0.5">•</span>
               <span className="flex-1">{formatInline(trimmed.slice(2))}</span>
+            </div>
+          );
+        }
+
+        const numMatch = trimmed.match(/^(\d+\.)\s+(.*)$/);
+        if (numMatch) {
+          return (
+            <div key={i} className="flex items-start gap-2 pl-1">
+              <span className="text-amber-400 font-semibold">{numMatch[1]}</span>
+              <span className="flex-1">{formatInline(numMatch[2])}</span>
             </div>
           );
         }
