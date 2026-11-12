@@ -248,4 +248,4 @@ cd backend && .venv/bin/pytest -v
 npx tsc --noEmit && npm run lint
 ```
 
-Para consultar la matriz histórica de escenarios probados y errores corregidos, revisa [`REGISTRO_PRUEBAS.md`](REGISTRO_PRUEBAS.md).
+
