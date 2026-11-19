@@ -8,7 +8,6 @@ import {
   Droplet,
   Flame,
   Timer,
-  Sparkles,
   Sliders,
   Calculator,
   CheckCircle2,
@@ -17,6 +16,7 @@ import {
   RotateCcw,
   ShoppingBag,
   Award,
+  MessageSquareQuote,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -81,9 +81,9 @@ export function BrewGuideSection() {
 
   if (!guide) {
     return (
-      <section id="guia-extraccion" className="py-20 bg-[#100c0a] border-t border-amber-600/20">
+      <section id="guia-extraccion" className="py-20 bg-[#f5f0e8] border-t border-[#e6dfd4]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="h-80 rounded-2xl bg-zinc-900/50 border border-zinc-800 animate-pulse" />
+          <div className="h-80 rounded-2xl bg-[#eae2d5] border border-[#ded5c6] animate-pulse" />
         </div>
       </section>
     );
@@ -97,18 +97,18 @@ export function BrewGuideSection() {
     .filter((p): p is NonNullable<typeof p> => Boolean(p));
 
   return (
-    <section id="guia-extraccion" className="py-20 bg-[#100c0a] border-t border-amber-600/20">
+    <section id="guia-extraccion" className="py-20 bg-[#f5f0e8] border-t border-[#e6dfd4]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-3xl mx-auto space-y-3 mb-14">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-semibold">
-            <Sliders className="w-4 h-4" />
-            <span>Laboratorio Barista de AURA</span>
+        <div className="text-center max-w-3xl mx-auto space-y-3 mb-12">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#eae2d5] border border-[#dcd3c3] text-[#6d5743] text-xs font-semibold">
+            <Sliders className="w-3.5 h-3.5 text-[#8f461e]" />
+            <span>Taller del Barista</span>
           </div>
-          <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-amber-50">
+          <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-[#261f1a]">
             Guía de Extracción de Precisión
           </h2>
-          <p className="text-sm sm:text-base text-zinc-400">
-            El 98% de tu taza es agua. Dominar el ratio, la molienda y la temperatura es el secreto para extraer todas las notas florales y frutales sin amargor.
+          <p className="text-sm sm:text-base text-[#66574a]">
+            El 98% de tu taza es agua. Dominar el ratio, la molienda y la temperatura es el secreto para resaltar las notas florales y frutales sin amargor.
           </p>
         </div>
 
@@ -124,8 +124,8 @@ export function BrewGuideSection() {
               }}
               className={`px-5 py-2.5 rounded-xl font-medium text-xs sm:text-sm transition-all cursor-pointer border ${
                 selectedMethod === g.id
-                  ? 'bg-amber-500 text-zinc-950 font-bold border-amber-400 shadow-lg shadow-amber-500/20'
-                  : 'bg-zinc-900/80 text-zinc-300 border-zinc-800 hover:border-amber-500/40'
+                  ? 'bg-[#8f461e] text-white border-[#7a3915] shadow-xs font-semibold'
+                  : 'bg-white text-[#4f4337] border-[#ded5c6] hover:border-[#8f461e] hover:text-[#8f461e]'
               }`}
             >
               {g.name}
@@ -136,87 +136,87 @@ export function BrewGuideSection() {
         {/* Method Details Card & Ratio Calculator */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
           {/* Left: Guide Parameters + Recommended Coffees */}
-          <div className="lg:col-span-7 p-6 sm:p-8 rounded-2xl bg-zinc-950/80 border border-amber-500/30 flex flex-col justify-between space-y-6">
+          <div className="lg:col-span-7 p-6 sm:p-8 rounded-2xl bg-white border border-[#e2d8ca] shadow-xs flex flex-col justify-between space-y-6">
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider">
+                <span className="text-xs font-semibold text-[#8f461e] uppercase tracking-wider">
                   Método de Extracción
                 </span>
-                <span className="text-xs text-zinc-400 font-mono">Guía de Especialidad</span>
+                <span className="text-xs text-[#7d6f62] font-mono">Calibración de Barra</span>
               </div>
-              <h3 className="font-serif text-2xl sm:text-3xl font-bold text-amber-100">
+              <h3 className="font-serif text-2xl sm:text-3xl font-bold text-[#261f1a]">
                 {guide.name}
               </h3>
-              <p className="text-sm text-zinc-300 mt-1 italic">&quot;{guide.tagline}&quot;</p>
+              <p className="text-sm text-[#66574a] mt-1 italic">&quot;{guide.tagline}&quot;</p>
             </div>
 
-            {/* 4 Tech metrics */}
+            {/* 4 Metrics */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="p-3.5 rounded-xl bg-zinc-900/90 border border-zinc-800">
-                <Droplet className="w-5 h-5 text-amber-400 mb-1" />
-                <span className="text-[10px] text-zinc-400 uppercase font-medium block">
+              <div className="p-3.5 rounded-xl bg-[#faf7f2] border border-[#e8dfd3]">
+                <Droplet className="w-5 h-5 text-[#8f461e] mb-1" />
+                <span className="text-[10px] text-[#7d6f62] uppercase font-medium block">
                   Ratio Base
                 </span>
-                <span className="text-xs sm:text-sm font-bold text-zinc-100">{guide.ratio}</span>
+                <span className="text-xs sm:text-sm font-bold text-[#29211b]">{guide.ratio}</span>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-zinc-900/90 border border-zinc-800">
-                <Flame className="w-5 h-5 text-amber-400 mb-1" />
-                <span className="text-[10px] text-zinc-400 uppercase font-medium block">
+              <div className="p-3.5 rounded-xl bg-[#faf7f2] border border-[#e8dfd3]">
+                <Flame className="w-5 h-5 text-[#8f461e] mb-1" />
+                <span className="text-[10px] text-[#7d6f62] uppercase font-medium block">
                   Temp. Agua
                 </span>
-                <span className="text-xs sm:text-sm font-bold text-zinc-100">
+                <span className="text-xs sm:text-sm font-bold text-[#29211b]">
                   {guide.waterTemp}
                 </span>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-zinc-900/90 border border-zinc-800">
-                <Timer className="w-5 h-5 text-amber-400 mb-1" />
-                <span className="text-[10px] text-zinc-400 uppercase font-medium block">
+              <div className="p-3.5 rounded-xl bg-[#faf7f2] border border-[#e8dfd3]">
+                <Timer className="w-5 h-5 text-[#8f461e] mb-1" />
+                <span className="text-[10px] text-[#7d6f62] uppercase font-medium block">
                   Tiempo Total
                 </span>
-                <span className="text-xs sm:text-sm font-bold text-zinc-100">{guide.brewTime}</span>
+                <span className="text-xs sm:text-sm font-bold text-[#29211b]">{guide.brewTime}</span>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-zinc-900/90 border border-zinc-800">
-                <Sliders className="w-5 h-5 text-amber-400 mb-1" />
-                <span className="text-[10px] text-zinc-400 uppercase font-medium block">
+              <div className="p-3.5 rounded-xl bg-[#faf7f2] border border-[#e8dfd3]">
+                <Sliders className="w-5 h-5 text-[#8f461e] mb-1" />
+                <span className="text-[10px] text-[#7d6f62] uppercase font-medium block">
                   Molienda
                 </span>
-                <span className="text-xs sm:text-sm font-bold text-zinc-100">{guide.grind}</span>
+                <span className="text-xs sm:text-sm font-bold text-[#29211b]">{guide.grind}</span>
               </div>
             </div>
 
             {/* Pro Barista Tip */}
-            <div className="p-4 rounded-xl bg-amber-950/20 border border-amber-600/30">
-              <h5 className="text-xs font-bold text-amber-300 flex items-center gap-1.5 mb-1">
-                <CheckCircle2 className="w-4 h-4 text-amber-400" /> Secreto de Barra:
+            <div className="p-4 rounded-xl bg-[#f5efe7] border border-[#e2d6c6]">
+              <h5 className="text-xs font-bold text-[#8f461e] flex items-center gap-1.5 mb-1">
+                <CheckCircle2 className="w-4 h-4 text-[#8f461e]" /> Secreto del Barista:
               </h5>
-              <p className="text-xs text-zinc-300 leading-relaxed">{guide.tips}</p>
+              <p className="text-xs text-[#524438] leading-relaxed">{guide.tips}</p>
             </div>
 
             {/* Recommended Coffees for this Method */}
             {recommendedProducts.length > 0 && (
-              <div className="space-y-2.5 pt-2 border-t border-zinc-800/80">
-                <span className="text-xs font-semibold text-amber-300 flex items-center gap-1.5">
-                  <Award className="w-4 h-4 text-amber-400" /> Microlotes calibrados para {guide.id}:
+              <div className="space-y-2.5 pt-2 border-t border-[#eee7dd]">
+                <span className="text-xs font-semibold text-[#8f461e] flex items-center gap-1.5">
+                  <Award className="w-4 h-4 text-[#8f461e]" /> Microlotes calibrados para {guide.id}:
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {recommendedProducts.map((coffee) => (
                     <div
                       key={coffee.id}
-                      className="p-3 rounded-xl bg-zinc-900/80 border border-zinc-800 hover:border-amber-500/40 flex items-center justify-between gap-2 transition-colors"
+                      className="p-3 rounded-xl bg-[#faf7f2] border border-[#e8dfd3] hover:border-[#bdafa0] flex items-center justify-between gap-2 transition-colors"
                     >
                       <div className="min-w-0">
-                        <h6 className="text-xs font-bold text-zinc-100 truncate">{coffee.name}</h6>
-                        <p className="text-[10px] text-zinc-400 truncate">
+                        <h6 className="text-xs font-bold text-[#29211b] truncate">{coffee.name}</h6>
+                        <p className="text-[10px] text-[#78695c] truncate">
                           {coffee.tastingNotes.slice(0, 2).join(' • ')} • ${coffee.price.toFixed(2)}
                         </p>
                       </div>
                       <button
                         onClick={() => addItem(coffee, getGrindForGuide(guide.id))}
                         title={`Añadir con ${getGrindForGuide(guide.id)}`}
-                        className="shrink-0 px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-[11px] flex items-center gap-1 cursor-pointer transition-colors"
+                        className="shrink-0 px-2.5 py-1.5 rounded-lg bg-[#8f461e] hover:bg-[#783916] text-white font-medium text-[11px] flex items-center gap-1 cursor-pointer transition-colors shadow-xs"
                       >
                         <ShoppingBag className="w-3 h-3" />
                         <span>Añadir</span>
@@ -229,15 +229,15 @@ export function BrewGuideSection() {
           </div>
 
           {/* Right: Interactive Ratio Calculator + Live Brew Timer */}
-          <div className="lg:col-span-5 p-6 sm:p-8 rounded-2xl bg-gradient-to-b from-zinc-950 to-[#140f0c] border border-amber-500/40 flex flex-col justify-between space-y-6">
+          <div className="lg:col-span-5 p-6 sm:p-8 rounded-2xl bg-white border border-[#e2d8ca] shadow-xs flex flex-col justify-between space-y-6">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <Calculator className="w-5 h-5 text-amber-400" />
-                <h4 className="font-serif text-lg font-bold text-amber-100">
+                <Calculator className="w-5 h-5 text-[#8f461e]" />
+                <h4 className="font-serif text-lg font-bold text-[#261f1a]">
                   Calculadora de Ratio & Cronómetro
                 </h4>
               </div>
-              <p className="text-xs text-zinc-400 leading-relaxed">
+              <p className="text-xs text-[#66574a] leading-relaxed">
                 Ajusta la dosis de café seco para obtener el agua exacta y cronometra tu extracción en tiempo real.
               </p>
             </div>
@@ -245,8 +245,8 @@ export function BrewGuideSection() {
             {/* Slider / Gram input */}
             <div className="space-y-4">
               <div className="flex justify-between items-center text-sm">
-                <span className="text-zinc-300 font-medium">Gramos de café seco:</span>
-                <span className="text-xl font-serif font-bold text-amber-400">{coffeeGrams} g</span>
+                <span className="text-[#594d42] font-medium">Gramos de café seco:</span>
+                <span className="text-xl font-serif font-bold text-[#8f461e]">{coffeeGrams} g</span>
               </div>
 
               <input
@@ -257,48 +257,48 @@ export function BrewGuideSection() {
                 value={coffeeGrams}
                 onChange={(e) => setCoffeeGrams(Number(e.target.value))}
                 aria-label="Gramos de café seco"
-                className="w-full accent-amber-500 cursor-pointer"
+                className="w-full accent-[#8f461e] cursor-pointer"
               />
-              <div className="flex justify-between text-[10px] text-zinc-500">
+              <div className="flex justify-between text-[10px] text-[#8c7e72]">
                 <span>10g (1 taza ligera)</span>
                 <span>20g (2 tazas)</span>
                 <span>40g (Jarra Chemex)</span>
               </div>
 
               {/* Calculated Results Box */}
-              <div className="p-4 rounded-xl bg-zinc-900 border border-amber-500/30 text-center space-y-1">
-                <span className="text-[11px] text-zinc-400 block uppercase font-medium">
+              <div className="p-4 rounded-xl bg-[#faf7f2] border border-[#e8dfd3] text-center space-y-1">
+                <span className="text-[11px] text-[#706154] block uppercase font-medium">
                   {selectedMethod === 'Espresso'
                     ? 'Rendimiento Líquido en Taza (Ratio 1:2):'
                     : `Agua Caliente Requerida (${guide.waterTemp}):`}
                 </span>
-                <span className="font-serif text-3xl font-extrabold text-amber-300">
+                <span className="font-serif text-3xl font-extrabold text-[#261f1a]">
                   {calculatedWater} ml / gramos
                 </span>
                 {selectedMethod !== 'Espresso' && (
-                  <span className="text-[10px] text-emerald-400 block">
-                    ✓ Pre-infusión (Bloom) sugerida: primeros {calculatedBloom} ml por 40s
+                  <span className="text-[11px] text-[#33683f] font-medium block">
+                    ✓ Pre-infusión sugerida: primeros {calculatedBloom} ml durante 40s
                   </span>
                 )}
               </div>
 
               {/* Interactive Brew Timer */}
-              <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center justify-between gap-3">
+              <div className="p-3.5 rounded-xl bg-[#faf7f2] border border-[#e8dfd3] flex items-center justify-between gap-3">
                 <div>
-                  <span className="text-[10px] uppercase tracking-wider text-zinc-500 block">
+                  <span className="text-[10px] uppercase tracking-wider text-[#7d6f62] block">
                     Cronómetro Barista ({guide.brewTime})
                   </span>
-                  <span className="font-mono text-2xl font-bold text-amber-100">
+                  <span className="font-mono text-2xl font-bold text-[#261f1a]">
                     {formatTime(timerSeconds)}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setIsRunning((r) => !r)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs ${
                       isRunning
-                        ? 'bg-amber-600/30 text-amber-300 border border-amber-500/40'
-                        : 'bg-amber-500 text-zinc-950 hover:bg-amber-400'
+                        ? 'bg-[#f0e4d5] text-[#8f461e] border border-[#d8c5b0]'
+                        : 'bg-[#8f461e] text-white hover:bg-[#783916]'
                     }`}
                   >
                     {isRunning ? (
@@ -318,7 +318,7 @@ export function BrewGuideSection() {
                     }}
                     title="Reiniciar cronómetro"
                     aria-label="Reiniciar cronómetro"
-                    className="p-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 cursor-pointer"
+                    className="p-1.5 rounded-lg bg-white hover:bg-[#f2ece2] text-[#6b5c4f] border border-[#ded5c6] cursor-pointer"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                   </button>
@@ -329,9 +329,9 @@ export function BrewGuideSection() {
             {/* Ask Don Aurelio CTA */}
             <Button
               onClick={() => openSommelierWithCoffee()}
-              className="w-full bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 text-zinc-950 font-bold py-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-amber-600/25"
+              className="w-full bg-[#8f461e] hover:bg-[#783916] text-white font-medium py-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-xs border border-[#783916]"
             >
-              <Sparkles className="w-4 h-4" />
+              <MessageSquareQuote className="w-4 h-4 text-amber-200" />
               <span>Pedir Receta Personalizada a Don Aurelio</span>
             </Button>
           </div>

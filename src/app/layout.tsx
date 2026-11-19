@@ -24,9 +24,9 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: 'AURA • Specialty Coffee Roasters | Tostaduría de Autor & Sommelier Virtual',
+  title: 'AURA • Specialty Coffee Roasters | Café de Origen & Tueste Artesanal',
   description:
-    'Microlotes de café de especialidad con puntuación SCA superior a 86 puntos. Conoce a Don Aurelio, nuestro sommelier virtual con IA que te ayuda a elegir y preparar el café ideal.',
+    'Microlotes exclusivos de café de especialidad con puntuación SCA superior a 86 puntos. Conoce a Don Aurelio, nuestro maestro barista que te guía para preparar tu taza ideal.',
   keywords: [
     'café de especialidad',
     'specialty coffee',
@@ -34,13 +34,13 @@ export const metadata: Metadata = {
     'bourbon rosado huila',
     'v60',
     'chemex',
-    'sommelier café',
-    'tostaduría artesanal',
+    'barista artesanal',
+    'tostaduría de café',
   ],
   authors: [{ name: 'AURA Coffee Roasters' }],
   openGraph: {
-    title: 'AURA • Specialty Coffee Roasters | Sommelier Virtual con IA',
-    description: 'Descubre tu café de especialidad ideal con nuestro sommelier inteligente.',
+    title: 'AURA • Specialty Coffee Roasters | Café de Origen & Tueste Artesanal',
+    description: 'Microlotes de estricta altura y guía de preparación de café de especialidad.',
     type: 'website',
     locale: 'es_ES',
   },
@@ -54,9 +54,9 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} h-full antialiased dark`}
+      className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#0d0a09] text-zinc-100 font-sans selection:bg-amber-500 selection:text-zinc-950">
+      <body className="min-h-full flex flex-col bg-[#fbf9f5] text-[#29211b] font-sans selection:bg-[#edd8be] selection:text-[#382618]">
         <CartProvider>
           <Navbar />
           <main className="flex-1">{children}</main>

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useCart } from '@/context/CartContext';
 import { FlavorCategory } from '@/types/coffee';
-import { Sparkles, Compass, ArrowRight } from 'lucide-react';
+import { Compass, ArrowRight, MessageSquareQuote } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface CategoryTab {
@@ -26,7 +26,7 @@ const CATEGORIES: CategoryTab[] = [
     id: 'floral-citrico',
     title: 'Florales & Cítricos',
     emoji: '🌸',
-    description: 'Acidez brillante, aromas de jazmín blanco y notas cítricas de bergamota.',
+    description: 'Acidez brillante, aromas de jazmín silvestre y notas cítricas de bergamota.',
     notes: ['Jazmín Silvestre', 'Bergamota', 'Pomelo Rubí', 'Miel de Azahar'],
   },
   {
@@ -80,18 +80,18 @@ export function FlavorRadarSection({
       : products.filter((c) => c.flavorCategory === activeCategory);
 
   return (
-    <section id="perfil-sensorial" className="py-16 bg-[#0f0c0a] border-y border-amber-600/20">
+    <section id="perfil-sensorial" className="py-16 bg-[#f5f0e8] border-y border-[#e6dfd4]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-3xl mx-auto space-y-3 mb-12">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-semibold">
-            <Compass className="w-4 h-4" />
-            <span>Navegación Sensorial</span>
+        <div className="text-center max-w-3xl mx-auto space-y-3 mb-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#eae2d5] border border-[#dcd3c3] text-[#6d5743] text-xs font-semibold">
+            <Compass className="w-3.5 h-3.5 text-[#8f461e]" />
+            <span>Guía de Sabores & Aromas</span>
           </div>
-          <h2 className="font-serif text-3xl sm:text-4xl font-bold text-amber-100">
+          <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#261f1a]">
             Encuentra tu Café por Familia de Sabor
           </h2>
-          <p className="text-sm sm:text-base text-zinc-400">
-            Así como el vino responde a su uva y terruño, cada grano de especialidad despliega una constelación de notas aromáticas naturales.
+          <p className="text-sm sm:text-base text-[#66574a]">
+            Así como el vino responde a su uva y terruño, cada grano de especialidad despliega una armonía de notas aromáticas naturales.
           </p>
         </div>
 
@@ -101,10 +101,10 @@ export function FlavorRadarSection({
             <button
               key={cat.id}
               onClick={() => handleSelect(cat.id)}
-              className={`px-4 py-2.5 rounded-full text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 cursor-pointer border ${
+              className={`px-4 py-2.5 rounded-full text-xs sm:text-sm font-medium transition-all flex items-center gap-2 cursor-pointer border ${
                 activeCategory === cat.id
-                  ? 'bg-amber-500 text-zinc-950 border-amber-400 shadow-lg shadow-amber-500/20 scale-105'
-                  : 'bg-zinc-900/80 text-zinc-300 border-zinc-800 hover:border-amber-500/40 hover:text-white'
+                  ? 'bg-[#8f461e] text-white border-[#7a3915] shadow-xs'
+                  : 'bg-white text-[#4f4337] border-[#ded5c6] hover:border-[#8f461e] hover:text-[#8f461e]'
               }`}
             >
               <span>{cat.emoji}</span>
@@ -114,37 +114,37 @@ export function FlavorRadarSection({
         </div>
 
         {/* Selected Category Highlight Banner */}
-        <div className="p-6 sm:p-8 rounded-2xl bg-zinc-950/80 border border-amber-500/30 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="p-6 sm:p-8 rounded-2xl bg-white border border-[#e2d8ca] shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-2.5 text-center md:text-left">
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
               <span className="text-2xl">{activeInfo.emoji}</span>
-              <h3 className="font-serif text-xl sm:text-2xl font-bold text-amber-200">
+              <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#261f1a]">
                 {activeInfo.title}
               </h3>
-              <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/30 text-xs">
+              <Badge className="bg-[#f2ece2] text-[#6d5845] border border-[#ded4c4] text-xs">
                 {matchingCoffees.length}{' '}
                 {matchingCoffees.length === 1 ? 'microlote disponible' : 'microlotes disponibles'}
               </Badge>
             </div>
-            <p className="text-sm text-zinc-300 max-w-xl">{activeInfo.description}</p>
+            <p className="text-sm text-[#5c4e43] max-w-xl">{activeInfo.description}</p>
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-1.5 pt-1">
-              <span className="text-xs text-zinc-500 mr-1">Notas dominantes:</span>
+              <span className="text-xs text-[#7d6e61] mr-1">Notas dominantes:</span>
               {activeInfo.notes.map((note) => (
                 <span
                   key={note}
-                  className="text-xs px-2 py-0.5 rounded-md bg-zinc-900 text-amber-300 border border-zinc-700 font-medium"
+                  className="text-xs px-2.5 py-0.5 rounded-md bg-[#f6f1ea] text-[#3d3126] border border-[#e3dacc] font-medium"
                 >
                   {note}
                 </span>
               ))}
             </div>
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 pt-1">
-              <span className="text-xs text-zinc-500">Granos en esta familia:</span>
+              <span className="text-xs text-[#7d6e61]">Granos en esta familia:</span>
               {matchingCoffees.map((c) => (
                 <a
                   key={c.id}
                   href="#catalogo"
-                  className="text-xs text-amber-400 hover:underline font-medium"
+                  className="text-xs text-[#8f461e] hover:underline font-medium"
                 >
                   • {c.name}
                 </a>
@@ -155,17 +155,17 @@ export function FlavorRadarSection({
           <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
             <a
               href="#catalogo"
-              className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs sm:text-sm flex items-center gap-2 transition-colors cursor-pointer"
+              className="px-5 py-2.5 rounded-xl bg-[#8f461e] hover:bg-[#783916] text-white font-medium text-xs sm:text-sm flex items-center gap-2 transition-colors cursor-pointer shadow-xs"
             >
-              <span>Ver Granos Filtrados ({matchingCoffees.length})</span>
+              <span>Ver Granos ({matchingCoffees.length})</span>
               <ArrowRight className="w-4 h-4" />
             </a>
 
             <button
               onClick={() => openSommelierWithCoffee()}
-              className="px-4 py-2.5 rounded-xl border border-amber-500/40 text-amber-300 hover:bg-amber-500/10 text-xs sm:text-sm font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-4 py-2.5 rounded-xl border border-[#cbbfae] text-[#5e4f42] hover:bg-[#fbf7f1] text-xs sm:text-sm font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
             >
-              <Sparkles className="w-4 h-4" />
+              <MessageSquareQuote className="w-4 h-4 text-[#8f461e]" />
               <span>Preguntar a Don Aurelio</span>
             </button>
           </div>

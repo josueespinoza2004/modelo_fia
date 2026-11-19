@@ -6,7 +6,6 @@ import { useCart } from '@/context/CartContext';
 import { fetchCoffees } from '@/lib/api';
 import { CoffeeProduct, FlavorCategory, CartItem, BrewMethod } from '@/types/coffee';
 import {
-  Sparkles,
   ShoppingBag,
   Award,
   Mountain,
@@ -18,6 +17,7 @@ import {
   Layers,
   Quote,
   RotateCcw,
+  MessageSquareQuote,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -41,15 +41,15 @@ function SensoryBar({ label, value }: { label: string; value: number }) {
   return (
     <div className="space-y-1">
       <div className="flex justify-between text-[10px]">
-        <span className="text-zinc-400 font-medium">{label}</span>
-        <span className="text-amber-300 font-mono font-semibold">{value}/5</span>
+        <span className="text-[#706154] font-medium">{label}</span>
+        <span className="text-[#8f461e] font-mono font-semibold">{value}/5</span>
       </div>
       <div className="flex gap-1">
         {[1, 2, 3, 4, 5].map((step) => (
           <div
             key={step}
             className={`h-1.5 flex-1 rounded-full transition-colors ${
-              step <= value ? 'bg-amber-500' : 'bg-zinc-800'
+              step <= value ? 'bg-[#8f461e]' : 'bg-[#e8e0d4]'
             }`}
           />
         ))}
@@ -140,19 +140,19 @@ export function ProductCatalog({ initialFilter = 'todos', onFilterChange }: Prod
   };
 
   return (
-    <section id="catalogo" className="py-20 bg-[#0d0a09]">
+    <section id="catalogo" className="py-20 bg-[#fbf9f5]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-semibold mb-3">
-              <Award className="w-4 h-4" />
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f1ebe0] border border-[#e1d7c7] text-[#785d47] text-xs font-semibold mb-3">
+              <Award className="w-4 h-4 text-[#8f461e]" />
               <span>Cosecha 2026 • Microlotes Numerados</span>
             </div>
-            <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-amber-50">
+            <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-[#261f1a]">
               Colección de Cafés de Especialidad
             </h2>
-            <p className="text-sm sm:text-base text-zinc-400 mt-2 max-w-xl">
+            <p className="text-sm sm:text-base text-[#66574a] mt-2 max-w-xl">
               Cada bolsa contiene 250g de granos seleccionados a mano, tostados por convección lenta y empaquetados con válvula de frescura.
             </p>
           </div>
@@ -171,8 +171,8 @@ export function ProductCatalog({ initialFilter = 'todos', onFilterChange }: Prod
                 onClick={() => handleCategoryChange(tab.id as FlavorCategory | 'todos')}
                 className={`px-3 py-1.5 rounded-lg border font-medium transition-colors cursor-pointer ${
                   selectedFilter === tab.id
-                    ? 'bg-amber-500 text-zinc-950 border-amber-400 font-semibold shadow-sm shadow-amber-500/20'
-                    : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-white'
+                    ? 'bg-[#8f461e] text-white border-[#7a3915] font-semibold shadow-xs'
+                    : 'bg-white text-[#524538] border-[#ded5c6] hover:text-[#8f461e] hover:border-[#8f461e]'
                 }`}
               >
                 {tab.label}
@@ -182,28 +182,28 @@ export function ProductCatalog({ initialFilter = 'todos', onFilterChange }: Prod
         </div>
 
         {/* Search, Brew Method Filter & Sort Toolbar */}
-        <div className="p-4 rounded-2xl bg-zinc-950/90 border border-zinc-800/90 mb-10 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+        <div className="p-4 rounded-2xl bg-white border border-[#e2d8ca] mb-10 shadow-xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
           {/* Search Input */}
           <div className="relative flex-1 max-w-md">
-            <Search className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-[#8c7d6f] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar por origen, nota de cata (ej. jazmín, cacao, Panamá)..."
-              className="w-full pl-9 pr-4 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs sm:text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+              className="w-full pl-9 pr-4 py-2 rounded-xl bg-[#faf7f2] border border-[#ded5c6] text-xs sm:text-sm text-[#29211b] placeholder:text-[#998b7c] focus:outline-none focus:border-[#8f461e] transition-colors"
             />
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
             {/* Filter by Brew Method */}
             <div className="flex items-center gap-2">
-              <span className="text-xs text-zinc-400 hidden sm:inline">Cafetera:</span>
+              <span className="text-xs text-[#706154] hidden sm:inline">Cafetera:</span>
               <select
                 value={selectedMethod}
                 onChange={(e) => setSelectedMethod(e.target.value as BrewMethod | 'todos')}
                 aria-label="Filtrar por método de preparación"
-                className="text-xs bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-zinc-200 focus:outline-none focus:border-amber-500 cursor-pointer"
+                className="text-xs bg-[#faf7f2] border border-[#ded5c6] rounded-xl px-3 py-2 text-[#382b20] focus:outline-none focus:border-[#8f461e] cursor-pointer"
               >
                 <option value="todos">Todos los métodos</option>
                 <option value="V60">V60 / Goteo</option>
@@ -216,12 +216,12 @@ export function ProductCatalog({ initialFilter = 'todos', onFilterChange }: Prod
 
             {/* Sort By */}
             <div className="flex items-center gap-2">
-              <SlidersHorizontal className="w-3.5 h-3.5 text-amber-400 hidden sm:inline" />
+              <SlidersHorizontal className="w-3.5 h-3.5 text-[#8f461e] hidden sm:inline" />
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as SortOption)}
                 aria-label="Ordenar catálogo"
-                className="text-xs bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-zinc-200 focus:outline-none focus:border-amber-500 cursor-pointer"
+                className="text-xs bg-[#faf7f2] border border-[#ded5c6] rounded-xl px-3 py-2 text-[#382b20] focus:outline-none focus:border-[#8f461e] cursor-pointer"
               >
                 <option value="featured">Ordenar: Destacados</option>
                 <option value="sca-desc">Mayor Puntaje SCA</option>
@@ -234,12 +234,12 @@ export function ProductCatalog({ initialFilter = 'todos', onFilterChange }: Prod
 
         {/* Backend Error / Loading / Empty State */}
         {catalogError && filteredProducts.length === 0 ? (
-          <div className="p-10 rounded-2xl bg-red-950/20 border border-red-500/30 text-center space-y-3">
-            <p className="font-serif text-lg text-red-200">{catalogError}</p>
+          <div className="p-10 rounded-2xl bg-[#fdf2f2] border border-[#f5c6c6] text-center space-y-3">
+            <p className="font-serif text-lg text-[#991b1b]">{catalogError}</p>
             <Button
               onClick={reloadCatalog}
               variant="outline"
-              className="border-amber-500/40 text-amber-300 hover:bg-amber-500/10 text-xs cursor-pointer"
+              className="border-[#8f461e] text-[#8f461e] hover:bg-[#faf4ee] text-xs cursor-pointer"
             >
               Reintentar Conexión
             </Button>
@@ -249,32 +249,32 @@ export function ProductCatalog({ initialFilter = 'todos', onFilterChange }: Prod
             {[1, 2, 3].map((n) => (
               <div
                 key={n}
-                className="h-[480px] rounded-2xl bg-zinc-900/50 border border-zinc-800 animate-pulse"
+                className="h-[480px] rounded-2xl bg-[#f2ece2] border border-[#e4dacf] animate-pulse"
               />
             ))}
           </div>
         ) : filteredProducts.length === 0 ? (
-          <div className="p-12 rounded-2xl bg-zinc-950/70 border border-zinc-800 text-center space-y-4">
-            <p className="font-serif text-xl text-amber-100">
+          <div className="p-12 rounded-2xl bg-white border border-[#e2d8ca] text-center space-y-4 shadow-xs">
+            <p className="font-serif text-xl text-[#261f1a]">
               No encontramos microlotes que coincidan con esos filtros exactos.
             </p>
-            <p className="text-xs sm:text-sm text-zinc-400 max-w-md mx-auto">
+            <p className="text-xs sm:text-sm text-[#66574a] max-w-md mx-auto">
               Prueba limpiando los filtros o pregúntale directamente a Don Aurelio para que te recomiende el grano más cercano.
             </p>
             <div className="flex justify-center gap-3 pt-2">
               <Button
                 onClick={resetAllFilters}
                 variant="outline"
-                className="border-amber-500/40 text-amber-300 hover:bg-amber-500/10 text-xs flex items-center gap-1.5 cursor-pointer"
+                className="border-[#ded5c6] text-[#4f4134] hover:bg-[#f6f1e9] text-xs flex items-center gap-1.5 cursor-pointer"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Restablecer Filtros</span>
               </Button>
               <Button
                 onClick={() => openSommelierWithCoffee()}
-                className="bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                className="bg-[#8f461e] hover:bg-[#783916] text-white font-medium text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
               >
-                <Sparkles className="w-3.5 h-3.5" />
+                <MessageSquareQuote className="w-3.5 h-3.5 text-amber-200" />
                 <span>Consultar a Don Aurelio</span>
               </Button>
             </div>
@@ -288,46 +288,46 @@ export function ProductCatalog({ initialFilter = 'todos', onFilterChange }: Prod
               return (
                 <Card
                   key={coffee.id}
-                  className="bg-[#140f0c] border-amber-600/20 hover:border-amber-500/50 transition-all duration-300 flex flex-col overflow-hidden group shadow-xl"
+                  className="bg-white border-[#e4dacf] hover:border-[#bdafa0] transition-all duration-300 flex flex-col overflow-hidden group shadow-xs hover:shadow-md rounded-2xl"
                 >
                   {/* Image & Header Badges */}
                   <div
                     onClick={() => setDetailCoffee(coffee)}
-                    className="relative w-full aspect-[4/3] bg-zinc-900 overflow-hidden cursor-pointer"
+                    className="relative w-full aspect-[4/3] bg-[#f0e9df] overflow-hidden cursor-pointer"
                   >
                     <Image
                       src={coffee.image}
                       alt={coffee.name}
                       fill
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="object-cover group-hover:scale-104 transition-transform duration-500"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#140f0c] via-transparent to-black/40" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
 
                     {/* SCA Score Badge */}
-                    <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-950/90 border border-amber-500/40 backdrop-blur-md">
-                      <Award className="w-3.5 h-3.5 text-amber-400" />
-                      <span className="text-xs font-bold text-amber-300">
+                    <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/95 border border-[#e2d8ca] backdrop-blur-md shadow-xs">
+                      <Award className="w-3.5 h-3.5 text-[#8f461e]" />
+                      <span className="text-xs font-bold text-[#29211b]">
                         SCA {coffee.scaScore}
                       </span>
                     </div>
 
                     {/* Roast Badge */}
-                    <div className="absolute top-3 right-3 px-2 py-0.5 rounded-md bg-amber-950/80 border border-amber-600/40 text-[11px] font-semibold text-amber-200">
+                    <div className="absolute top-3 right-3 px-2 py-0.5 rounded-md bg-[#29211b]/80 border border-white/20 text-[11px] font-medium text-white backdrop-blur-xs">
                       Tueste {coffee.roastLevel}
                     </div>
 
                     {/* Quick view hint on hover */}
-                    <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity px-2.5 py-1 rounded-lg bg-zinc-950/85 border border-amber-500/40 text-[10px] text-amber-300 font-medium flex items-center gap-1">
-                      <Eye className="w-3 h-3" /> Ficha Técnica
+                    <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity px-2.5 py-1 rounded-lg bg-white/95 border border-[#ded5c6] text-[10px] text-[#3d3126] font-medium flex items-center gap-1 shadow-xs">
+                      <Eye className="w-3 h-3 text-[#8f461e]" /> Ficha Técnica
                     </div>
 
                     {/* Origin Tag on Bottom Left of Image */}
                     <div className="absolute bottom-3 left-4 right-28 text-left">
-                      <span className="text-[11px] font-semibold text-amber-400 uppercase tracking-wider flex items-center gap-1">
+                      <span className="text-[11px] font-semibold text-amber-200 uppercase tracking-wider flex items-center gap-1 drop-shadow-xs">
                         <Mountain className="w-3 h-3 shrink-0" /> {coffee.country} • {coffee.region}
                       </span>
-                      <h3 className="font-serif text-lg font-bold text-amber-100 leading-snug">
+                      <h3 className="font-serif text-lg font-bold text-white leading-snug drop-shadow-sm">
                         {coffee.name}
                       </h3>
                     </div>
@@ -335,18 +335,18 @@ export function ProductCatalog({ initialFilter = 'todos', onFilterChange }: Prod
 
                   <CardContent className="p-5 flex-1 flex flex-col justify-between space-y-4">
                     {/* Farm, Variety & Altitude details */}
-                    <div className="text-xs text-zinc-400 flex items-center justify-between border-b border-zinc-800 pb-3">
+                    <div className="text-xs text-[#6e5f52] flex items-center justify-between border-b border-[#eee7dd] pb-3">
                       <span className="truncate pr-2">
-                        Finca: <strong className="text-zinc-200">{coffee.farm}</strong>
+                        Finca: <strong className="text-[#261f1a] font-medium">{coffee.farm}</strong>
                       </span>
-                      <span className="shrink-0 font-mono text-[11px] text-amber-300/90">
+                      <span className="shrink-0 font-mono text-[11px] text-[#8f461e] font-medium">
                         {coffee.altitude}
                       </span>
                     </div>
 
                     {/* Tasting Notes */}
                     <div>
-                      <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider block mb-1.5">
+                      <span className="text-[10px] font-semibold text-[#8a7b6f] uppercase tracking-wider block mb-1.5">
                         Notas de Cata:
                       </span>
                       <div className="flex flex-wrap gap-1.5">
@@ -354,7 +354,7 @@ export function ProductCatalog({ initialFilter = 'todos', onFilterChange }: Prod
                           <Badge
                             key={note}
                             variant="secondary"
-                            className="bg-zinc-900 border-zinc-800 text-amber-300 hover:bg-zinc-800 text-[11px] font-medium"
+                            className="bg-[#f5efe7] border-[#e4d9cc] text-[#423326] hover:bg-[#eae1d3] text-[11px] font-medium"
                           >
                             {note}
                           </Badge>
@@ -363,28 +363,28 @@ export function ProductCatalog({ initialFilter = 'todos', onFilterChange }: Prod
                     </div>
 
                     {/* Visual Sensory Bars (Acidez, Cuerpo, Dulzura) */}
-                    <div className="grid grid-cols-3 gap-3 p-3 rounded-xl bg-zinc-950/70 border border-zinc-800/80">
+                    <div className="grid grid-cols-3 gap-3 p-3 rounded-xl bg-[#faf7f2] border border-[#e8dfd3]">
                       <SensoryBar label="Acidez" value={coffee.acidity} />
                       <SensoryBar label="Cuerpo" value={coffee.body} />
                       <SensoryBar label="Dulzura" value={coffee.sweetness} />
                     </div>
 
                     {/* Description excerpt */}
-                    <p className="text-xs text-zinc-400 line-clamp-2 leading-relaxed">
+                    <p className="text-xs text-[#66574a] line-clamp-2 leading-relaxed">
                       {coffee.description}
                     </p>
 
                     {/* Recommended Brew Methods */}
-                    <div className="text-[11px] text-zinc-400 flex items-center justify-between gap-1.5">
+                    <div className="text-[11px] text-[#6b5d51] flex items-center justify-between gap-1.5">
                       <div>
-                        <span className="text-zinc-500 font-medium">Ideal para: </span>
-                        <span className="text-amber-200 font-semibold">
+                        <span className="text-[#8c7e72]">Ideal para: </span>
+                        <span className="text-[#261f1a] font-semibold">
                           {coffee.recommendedBrews.join(', ')}
                         </span>
                       </div>
                       <button
                         onClick={() => setDetailCoffee(coffee)}
-                        className="text-[11px] text-amber-400 hover:underline font-medium shrink-0 cursor-pointer"
+                        className="text-[11px] text-[#8f461e] hover:underline font-medium shrink-0 cursor-pointer"
                       >
                         Ver ficha →
                       </button>
@@ -392,7 +392,7 @@ export function ProductCatalog({ initialFilter = 'todos', onFilterChange }: Prod
 
                     {/* Grind Selector Dropdown */}
                     <div className="space-y-1">
-                      <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">
+                      <label className="text-[10px] uppercase tracking-wider text-[#8a7a6c] font-medium">
                         Preferencia de Molienda:
                       </label>
                       <select
@@ -401,7 +401,7 @@ export function ProductCatalog({ initialFilter = 'todos', onFilterChange }: Prod
                           handleGrindChange(coffee.id, e.target.value as CartItem['grindOption'])
                         }
                         aria-label={`Seleccionar molienda para ${coffee.name}`}
-                        className="w-full text-xs bg-zinc-900 border border-zinc-700 rounded-lg p-2 text-zinc-200 focus:outline-none focus:border-amber-500 cursor-pointer"
+                        className="w-full text-xs bg-[#faf7f2] border border-[#ded5c6] rounded-lg p-2 text-[#2b221a] focus:outline-none focus:border-[#8f461e] cursor-pointer"
                       >
                         <option value="Grano Entero">Grano Entero (Para moler en casa)</option>
                         <option value="Molienda Media (V60 / Filtro)">
@@ -417,29 +417,29 @@ export function ProductCatalog({ initialFilter = 'todos', onFilterChange }: Prod
                     </div>
 
                     {/* Price & Action Buttons */}
-                    <div className="pt-2 border-t border-zinc-800 flex items-center justify-between gap-3">
+                    <div className="pt-2 border-t border-[#eee7dd] flex items-center justify-between gap-3">
                       <div>
-                        <span className="text-[10px] text-zinc-500 block">Bolsa {coffee.weightGrams}g</span>
-                        <span className="font-serif text-xl font-bold text-amber-400">
+                        <span className="text-[10px] text-[#8c7d6f] block">Bolsa {coffee.weightGrams}g</span>
+                        <span className="font-serif text-xl font-bold text-[#261f1a]">
                           ${coffee.price.toFixed(2)}{' '}
-                          <span className="text-xs font-sans font-normal text-zinc-400">USD</span>
+                          <span className="text-xs font-sans font-normal text-[#756658]">USD</span>
                         </span>
                       </div>
 
                       <div className="flex items-center gap-2">
-                        {/* Ask Sommelier Button */}
+                        {/* Ask Barista Button */}
                         <button
                           onClick={() => openSommelierWithCoffee(coffee)}
                           title="Preguntarle a Don Aurelio sobre este café"
-                          className="p-2.5 rounded-xl bg-zinc-900 border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 transition-colors cursor-pointer"
+                          className="p-2.5 rounded-xl bg-[#faf7f2] border border-[#ded5c6] text-[#4f4033] hover:text-[#8f461e] hover:border-[#8f461e] transition-colors cursor-pointer"
                         >
-                          <Sparkles className="w-4 h-4" />
+                          <MessageSquareQuote className="w-4 h-4" />
                         </button>
 
                         {/* Add to Cart Button */}
                         <Button
                           onClick={() => addItem(coffee, currentGrind)}
-                          className="bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow-md shadow-amber-600/20"
+                          className="bg-[#8f461e] hover:bg-[#783916] text-white font-medium px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow-xs border border-[#783916]"
                         >
                           <ShoppingBag className="w-3.5 h-3.5" />
                           <span>Añadir</span>
@@ -456,74 +456,74 @@ export function ProductCatalog({ initialFilter = 'todos', onFilterChange }: Prod
 
       {/* Modal de Ficha Técnica Completa */}
       <Dialog open={!!detailCoffee} onOpenChange={(open) => !open && setDetailCoffee(null)}>
-        <DialogContent className="bg-[#140f0c] border-amber-500/40 text-zinc-100 sm:max-w-xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-[#fbf9f5] border-[#ded4c5] text-[#29211b] sm:max-w-xl max-h-[90vh] overflow-y-auto shadow-2xl">
           {detailCoffee && (
             <>
               <DialogHeader>
                 <div className="flex items-center gap-2 mb-1">
-                  <Badge className="bg-amber-500 text-zinc-950 font-bold text-xs">
+                  <Badge className="bg-[#8f461e] text-white font-semibold text-xs">
                     SCA {detailCoffee.scaScore} pts
                   </Badge>
                   <Badge
                     variant="outline"
-                    className="border-amber-500/40 text-amber-300 text-xs"
+                    className="border-[#ded5c6] text-[#5e4e41] text-xs"
                   >
                     Tueste {detailCoffee.roastLevel}
                   </Badge>
-                  <span className="text-xs text-zinc-400">
+                  <span className="text-xs text-[#78695c]">
                     {detailCoffee.origin}, {detailCoffee.country}
                   </span>
                 </div>
-                <DialogTitle className="font-serif text-2xl font-bold text-amber-100">
+                <DialogTitle className="font-serif text-2xl font-bold text-[#261f1a]">
                   {detailCoffee.name}
                 </DialogTitle>
-                <DialogDescription className="text-amber-300/90 text-xs italic">
+                <DialogDescription className="text-[#8f461e] text-xs italic">
                   {detailCoffee.subtitle}
                 </DialogDescription>
               </DialogHeader>
 
               <div className="space-y-4 my-2">
-                <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
+                <p className="text-xs sm:text-sm text-[#5c4e42] leading-relaxed">
                   {detailCoffee.description}
                 </p>
 
                 {/* Traceability Grid */}
-                <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-zinc-900/90 border border-zinc-800 text-xs">
+                <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-white border border-[#e4dacf] text-xs shadow-xs">
                   <div className="flex items-start gap-2">
-                    <Mountain className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    <Mountain className="w-4 h-4 text-[#8f461e] shrink-0 mt-0.5" />
                     <div>
-                      <span className="text-[10px] text-zinc-500 uppercase block">Finca y Altitud</span>
-                      <span className="text-zinc-200 font-medium">
+                      <span className="text-[10px] text-[#8c7d6f] uppercase block">Finca y Altitud</span>
+                      <span className="text-[#29211b] font-medium">
                         {detailCoffee.farm} ({detailCoffee.altitude})
                       </span>
                     </div>
                   </div>
                   <div className="flex items-start gap-2">
-                    <User className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    <User className="w-4 h-4 text-[#8f461e] shrink-0 mt-0.5" />
                     <div>
-                      <span className="text-[10px] text-zinc-500 uppercase block">Caficultor</span>
-                      <span className="text-zinc-200 font-medium">{detailCoffee.producer}</span>
+                      <span className="text-[10px] text-[#8c7d6f] uppercase block">Caficultor</span>
+                      <span className="text-[#29211b] font-medium">{detailCoffee.producer}</span>
                     </div>
                   </div>
                   <div className="flex items-start gap-2">
-                    <Sprout className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    <Sprout className="w-4 h-4 text-[#8f461e] shrink-0 mt-0.5" />
                     <div>
-                      <span className="text-[10px] text-zinc-500 uppercase block">Variedad Botánica</span>
-                      <span className="text-zinc-200 font-medium">{detailCoffee.variety}</span>
+                      <span className="text-[10px] text-[#8c7d6f] uppercase block">Variedad Botánica</span>
+                      <span className="text-[#29211b] font-medium">{detailCoffee.variety}</span>
                     </div>
                   </div>
                   <div className="flex items-start gap-2">
-                    <Layers className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    <Layers className="w-4 h-4 text-[#8f461e] shrink-0 mt-0.5" />
                     <div>
-                      <span className="text-[10px] text-zinc-500 uppercase block">Beneficio / Proceso</span>
-                      <span className="text-zinc-200 font-medium">{detailCoffee.process}</span>
+                      <span className="text-[10px] text-[#8c7d6f] uppercase block">Beneficio / Proceso</span>
+                      <span className="text-[#29211b] font-medium">{detailCoffee.process}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Full 4-Sensory Bars */}
-                <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2.5">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-400 block">
+                <div className="p-4 rounded-xl bg-white border border-[#e4dacf] space-y-2.5 shadow-xs">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-[#8f461e] block">
                     Mapa Sensorial Q-Grader
                   </span>
                   <div className="grid grid-cols-2 gap-4">
@@ -535,25 +535,25 @@ export function ProductCatalog({ initialFilter = 'todos', onFilterChange }: Prod
                 </div>
 
                 {/* Sommelier Quote */}
-                <div className="p-3.5 rounded-xl bg-amber-950/20 border border-amber-500/30 flex gap-3 items-start">
-                  <Quote className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                <div className="p-3.5 rounded-xl bg-[#f5efe7] border border-[#e2d6c6] flex gap-3 items-start">
+                  <Quote className="w-5 h-5 text-[#8f461e] shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-xs text-amber-100 italic">
+                    <p className="text-xs text-[#3d3126] italic">
                       &quot;{detailCoffee.sommelierQuote}&quot;
                     </p>
-                    <span className="text-[10px] text-amber-400 font-semibold mt-1 block">
+                    <span className="text-[10px] text-[#8f461e] font-semibold mt-1 block">
                       — Don Aurelio, Maestro Tostador
                     </span>
                   </div>
                 </div>
 
                 {/* Actions */}
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-zinc-800">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-[#eee7dd]">
                   <div>
-                    <span className="text-[10px] text-zinc-400 block">
+                    <span className="text-[10px] text-[#807264] block">
                       Presentación {detailCoffee.weightGrams}g con válvula desgasificadora
                     </span>
-                    <span className="font-serif text-2xl font-bold text-amber-400">
+                    <span className="font-serif text-2xl font-bold text-[#261f1a]">
                       ${detailCoffee.price.toFixed(2)} USD
                     </span>
                   </div>
@@ -566,9 +566,9 @@ export function ProductCatalog({ initialFilter = 'todos', onFilterChange }: Prod
                         openSommelierWithCoffee(chosen);
                       }}
                       variant="outline"
-                      className="flex-1 sm:flex-initial border-amber-500/40 text-amber-300 hover:bg-amber-500/10 text-xs flex items-center gap-1.5 cursor-pointer"
+                      className="flex-1 sm:flex-initial border-[#ded5c6] text-[#4f4134] hover:bg-[#f6f1e9] text-xs flex items-center gap-1.5 cursor-pointer"
                     >
-                      <Sparkles className="w-3.5 h-3.5" />
+                      <MessageSquareQuote className="w-3.5 h-3.5 text-[#8f461e]" />
                       <span>Preguntar a Don Aurelio</span>
                     </Button>
 
@@ -578,7 +578,7 @@ export function ProductCatalog({ initialFilter = 'todos', onFilterChange }: Prod
                         addItem(detailCoffee, grind);
                         setDetailCoffee(null);
                       }}
-                      className="flex-1 sm:flex-initial bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                      className="flex-1 sm:flex-initial bg-[#8f461e] hover:bg-[#783916] text-white font-medium text-xs flex items-center gap-1.5 cursor-pointer border border-[#783916]"
                     >
                       <ShoppingBag className="w-3.5 h-3.5" />
                       <span>Añadir a la Cesta</span>
